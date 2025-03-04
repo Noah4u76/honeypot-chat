@@ -49,9 +49,10 @@
 
     <script>
         let socket;
+        let isAuthenticated = false;
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
-        const SERVER_ADDRESS = "wss://localhost:8000"; // Change for LAN
+        const SERVER_ADDRESS = "wss://localhost:8000"; // Use for local, change for LAN
     
         function login() {
             const username = document.getElementById("username").value.trim();
@@ -62,7 +63,7 @@
                 return;
             }
     
-            // ✅ Allow reconnection after disconnection
+            // Prevent duplicate connections
             if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
                 alert("Already connected!");
                 return;
@@ -72,8 +73,7 @@
     
             socket.onopen = () => {
                 console.log("Connected to WebSocket server.");
-                reconnectAttempts = 0; // Reset reconnection attempts
-    
+                reconnectAttempts = 0; // Reset reconnect attempts
                 socket.send(JSON.stringify({ type: "login", username, password }));
             };
     
@@ -82,21 +82,29 @@
                     const data = JSON.parse(event.data);
                     console.log("Received:", data);
     
-                    if (data.type === "login") {
-                        if (data.status === "success") {
-                            // ✅ Display chat area on successful login
-                            document.getElementById("chat-area").style.display = "block";
-                            document.getElementById("username").disabled = true;
-                            document.getElementById("password").disabled = true;
-                        } else {
-                            alert("Invalid credentials!");
-                        }
-                    } else if (data.type === "message") {
-                        updateChat(data.username, data.message);
-                    } else if (data.type === "error") {
-                        showError(data.error);
-                    } else if (data.type === "notification") {
-                        showNotification(data.message);
+                    switch (data.type) {
+                        case "login":
+                            if (data.status === "success") {
+                                isAuthenticated = true; 
+                                document.getElementById("chat-area").style.display = "block";
+                                document.getElementById("username").disabled = true;
+                                document.getElementById("password").disabled = true;
+                                document.getElementById("message").focus();
+                            } else {
+                                alert("Invalid credentials!");
+                            }
+                            break;
+                        case "message":
+                            updateChat(data.username, data.message);
+                            break;
+                        case "error":
+                            showError(data.error);
+                            break;
+                        case "notification":
+                            showNotification(data.message);
+                            break;
+                        default:
+                            console.warn("Unknown message type received:", data);
                     }
                 } catch (error) {
                     console.error("Error parsing server response:", error);
@@ -110,6 +118,7 @@
     
             socket.onclose = () => {
                 console.log("Disconnected from WebSocket server.");
+                isAuthenticated = false;
                 attemptReconnect();
             };
         }
@@ -117,6 +126,11 @@
         function sendMessage() {
             if (!socket || socket.readyState !== WebSocket.OPEN) {
                 alert("Not connected to the chat server!");
+                return;
+            }
+    
+            if (!isAuthenticated) {
+                alert("You must be logged in to send messages.");
                 return;
             }
     
@@ -129,13 +143,15 @@
             }
     
             socket.send(JSON.stringify({ type: "message", username, message }));
-            messageInput.value = ""; // ✅ Clears input after sending
+            messageInput.value = "";
+            messageInput.focus();
         }
     
         function logout() {
             if (socket) {
                 socket.close();
             }
+            isAuthenticated = false;
             document.getElementById("chat-area").style.display = "none";
             alert("Logged out.");
         }
@@ -166,7 +182,6 @@
             }
         }
     
-        // ✅ Listen for "Enter" key press inside the message input field
         document.getElementById("message").addEventListener("keypress", function (event) {
             if (event.key === "Enter") {
                 event.preventDefault(); 
@@ -174,6 +189,7 @@
             }
         });
     </script>
+    
     
 </body>
     

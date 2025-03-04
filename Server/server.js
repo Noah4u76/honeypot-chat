@@ -20,11 +20,10 @@ console.log(`[${new Date().toISOString()}] Secure WebSocket server running on ws
 
 wss.on('connection', (client) => {
     console.log("New client connected.");
-    client.authenticated = false;
+    client.authenticated = false; // Ensure client is marked unauthenticated initially
 
-    client.on('message', (data) => {
+    client.on('message', async (data) => {
         try {
-            // ✅ Convert WebSocket message to a string
             const message = typeof data === "string" ? data.trim() : data.toString().trim();
 
             if (!message) {
@@ -35,7 +34,11 @@ wss.on('connection', (client) => {
             const parsedData = JSON.parse(message);
 
             if (parsedData.type === "login") {
-                handleLogin(client, parsedData.username, parsedData.password);
+                const loginSuccess = await handleLogin(client, parsedData.username, parsedData.password);
+                if (loginSuccess) {
+                    client.authenticated = true; // Mark as authenticated
+                    console.log(`${parsedData.username} authenticated successfully.`);
+                }
             } else if (parsedData.type === "message") {
                 if (!client.authenticated) {
                     console.warn("Blocked unauthenticated user from sending a message.");
@@ -52,8 +55,6 @@ wss.on('connection', (client) => {
 
     client.on('close', () => handleDisconnect(client, wss));
 });
-
-
 
 // Start HTTPS + WSS Server
 httpsServer.listen(8000, '0.0.0.0', () => {

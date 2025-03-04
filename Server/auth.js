@@ -13,16 +13,15 @@ export async function handleLogin(client, username, password) {
 
         console.log(`Login attempt from ${username}`);
 
-        // ✅ Ensure users.json exists and is properly formatted
         let users = [];
         try {
             const data = await fs.readFile(usersFile, 'utf8');
 
             if (data.trim() === "") {
                 console.warn("Users file is empty, initializing with an empty array.");
-                await fs.writeFile(usersFile, JSON.stringify([], null, 2));
+                users = [];
             } else {
-                users = JSON.parse(data); // ✅ Parse only if valid
+                users = JSON.parse(data);
             }
         } catch (error) {
             if (error.code === 'ENOENT') {
@@ -39,6 +38,7 @@ export async function handleLogin(client, username, password) {
         let user = users.find(u => u.username === username);
 
         if (!user) {
+            // Register new user
             const salt = await bcrypt.genSalt(10);
             const hash = await bcrypt.hash(password, salt);
 
@@ -48,9 +48,12 @@ export async function handleLogin(client, username, password) {
 
             console.log(`New user created: ${username}`);
             client.send(JSON.stringify({ type: "login", status: "success" }));
+            return true;
         } else {
+            // Validate existing user
             const isValid = await bcrypt.compare(password, user.password);
             client.send(JSON.stringify({ type: "login", status: isValid ? "success" : "fail" }));
+            return isValid;
         }
     } catch (error) {
         console.error("Error handling login:", error);
