@@ -20,17 +20,22 @@ console.log(`[${new Date().toISOString()}] Secure WebSocket server running on ws
 
 wss.on('connection', (client) => {
     console.log("New client connected.");
-
     client.authenticated = false;
 
     client.on('message', (data) => {
         try {
-            const parsedData = JSON.parse(data);
+            // ✅ Convert WebSocket message to a string
+            const message = typeof data === "string" ? data.trim() : data.toString().trim();
+
+            if (!message) {
+                console.warn("Received empty message. Ignoring.");
+                return;
+            }
+
+            const parsedData = JSON.parse(message);
 
             if (parsedData.type === "login") {
-                if (handleLogin(client, parsedData.username, parsedData.password)) {
-                    client.authenticated = true;
-                }
+                handleLogin(client, parsedData.username, parsedData.password);
             } else if (parsedData.type === "message") {
                 if (!client.authenticated) {
                     console.warn("Blocked unauthenticated user from sending a message.");
@@ -40,12 +45,15 @@ wss.on('connection', (client) => {
                 handleMessage(client, parsedData.username, parsedData.message, wss);
             }
         } catch (error) {
-            console.error("Failed to parse message:", error);
+            console.error("Error parsing message:", error.message);
+            client.send(JSON.stringify({ type: "error", error: "Invalid JSON format." }));
         }
     });
 
     client.on('close', () => handleDisconnect(client, wss));
 });
+
+
 
 // Start HTTPS + WSS Server
 httpsServer.listen(8000, '0.0.0.0', () => {

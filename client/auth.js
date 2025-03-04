@@ -1,52 +1,69 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
-import promptSync from 'prompt-sync';
 
-const prompt = promptSync();
-const usersFile = 'users.json';
+const usersFile = "users.json";
 
-// Ensure users.json exists
-if (!fs.existsSync(usersFile)) {
-    fs.writeFileSync(usersFile, JSON.stringify([]));
-}
+export async function handleLogin(client, username, password) {
+    try {
+        if (!username || !password) {
+            console.warn("Login attempt with missing username or password.");
+            client.send(JSON.stringify({ type: "error", error: "Username and password required." }));
+            return false;
+        }
 
-function getUsers() {
-    return JSON.parse(fs.readFileSync(usersFile));
-}
+        console.log(`Login attempt from ${username}`);
 
-// Check if a user exists
-function userExists(username) {
-    return getUsers().some(user => user.username === username);
-}
+        let users = [];
+        try {
+            // ✅ Ensure users.json exists and is valid before reading
+            const data = await fs.readFile(usersFile, 'utf8');
 
-// Validate password
-async function isValidPassword(username, password) {
-    const users = getUsers();
-    const user = users.find(u => u.username === username);
-    return user ? await bcrypt.compare(password, user.password) : false;
-}
+            if (data.trim() === "") {
+                console.warn("Users file is empty, initializing with an empty array.");
+                users = [];
+            } else {
+                users = JSON.parse(data); // ✅ Parse only if valid
+            }
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                console.warn("Users file not found. Creating a new one.");
+                await fs.writeFile(usersFile, JSON.stringify([], null, 2));
+                users = [];
+            } else {
+                console.error("Error reading users file:", error);
+                client.send(JSON.stringify({ type: "error", error: "Server error. Try again later." }));
+                return false;
+            }
+        }
 
-// Register a new user
-async function registerUser(username, password) {
-    const users = getUsers();
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(password, salt);
+        let user = users.find(u => u.username === username);
 
-    users.push({ username, password: hash });
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-    console.log("User registered successfully.");
-}
+        if (!user) {
+            // ✅ Register new user
+            const salt = await bcrypt.genSalt(10);
+            const hash = await bcrypt.hash(password, salt);
 
-// Handle user login
-export async function loginUser() {
-    const username = prompt("Enter Username: ");
-    const password = prompt.hide("Enter a Password: ");
+            const newUser = { username, password: hash };
+            users.push(newUser);
 
-    if (!userExists(username)) {
-        await registerUser(username, password);
-    } else if (!(await isValidPassword(username, password))) {
-        throw new Error("Invalid password.");
+            // ✅ Properly write updated users list to JSON file
+            await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
+
+            console.log(`New user created: ${username}`);
+            client.send(JSON.stringify({ type: "login", status: "success" }));
+        } else {
+            // ✅ Validate existing user
+            const isValid = await bcrypt.compare(password, user.password);
+            if (isValid) {
+                console.log(`User ${username} successfully logged in.`);
+            } else {
+                console.warn(`User ${username} provided incorrect password.`);
+            }
+            client.send(JSON.stringify({ type: "login", status: isValid ? "success" : "fail" }));
+        }
+    } catch (error) {
+        console.error("Error handling login:", error);
+        client.send(JSON.stringify({ type: "error", error: "Server error. Try again later." }));
+        return false;
     }
-
-    return { username };
 }
