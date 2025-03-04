@@ -51,96 +51,79 @@
         let socket;
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
-        const SERVER_ADDRESS = "wss://localhost:8000"; // Change to "wss://your-local-ip:8000" for LAN
-
+        const SERVER_ADDRESS = "wss://localhost:8000"; // Use "wss://your-local-ip:8000" for LAN
+    
         function login() {
-            const username = document.getElementById("username").value.trim();
-            const password = document.getElementById("password").value.trim();
-
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+    
             if (!username || !password) {
                 alert("Please enter both username and password.");
                 return;
             }
-
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                console.log("Already connected to WebSocket.");
-                return;
-            }
-
+    
+            // Open a secure WebSocket connection
             socket = new WebSocket(SERVER_ADDRESS);
-
+    
             socket.onopen = () => {
                 console.log("Connected to WebSocket server");
                 reconnectAttempts = 0;
-
+    
+                // Send login request
                 socket.send(JSON.stringify({ type: "login", username, password }));
             };
-
+    
             socket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    console.log("Received:", data);
-
-                    if (data.type === "login") {
-                        if (data.status === "success") {
-                            document.getElementById("chat-area").style.display = "block";
-                            document.getElementById("username").disabled = true;
-                            document.getElementById("password").disabled = true;
-                        } else {
-                            alert("Invalid credentials!");
-                            socket.close();
-                        }
-                    } else if (data.type === "message") {
-                        updateChat(data.username, data.message);
-                    } else if (data.type === "error") {
-                        showError(data.error);
-                    } else if (data.type === "notification") {
-                        showNotification(data.message);
+                const data = JSON.parse(event.data);
+                console.log("Received:", data);
+    
+                if (data.type === "login") {
+                    if (data.status === "success") {
+                        document.getElementById("chat-area").style.display = "block";
+                        document.getElementById("username").disabled = true;
+                        document.getElementById("password").disabled = true;
+                    } else {
+                        alert("Invalid credentials!");
                     }
-                } catch (error) {
-                    console.error("Error processing message:", error);
+                } else if (data.type === "message") {
+                    updateChat(data.username, data.message);
+                } else if (data.type === "error") {
+                    showError(data.error);
+                } else if (data.type === "notification") {
+                    showNotification(data.message);
                 }
             };
-
+    
             socket.onerror = (error) => {
                 console.error("WebSocket Error:", error);
-                alert("WebSocket connection failed. Check server status.");
             };
-
+    
             socket.onclose = () => {
                 console.log("Disconnected from WebSocket server");
                 attemptReconnect();
             };
         }
-
+    
         function sendMessage() {
-            if (!socket || socket.readyState !== WebSocket.OPEN) {
-                alert("WebSocket connection is not open.");
-                return;
-            }
-
-            const message = document.getElementById("message").value.trim();
+            const messageInput = document.getElementById("message");
+            const message = messageInput.value.trim();
             const username = document.getElementById("username").value;
-
+    
             if (message === "" || message.toLowerCase() === "exit") {
                 logout();
                 return;
             }
-
+    
             socket.send(JSON.stringify({ type: "message", username, message }));
-            document.getElementById("message").value = "";
+            messageInput.value = "";
         }
-
+    
         function logout() {
-            if (socket) {
-                socket.close();
-            }
             document.getElementById("chat-area").style.display = "none";
-            document.getElementById("username").disabled = false;
-            document.getElementById("password").disabled = false;
+            socket.close();
             alert("Logged out.");
         }
-
+    
         function updateChat(username, message) {
             const chatDiv = document.getElementById("chat");
             const msgElement = document.createElement("p");
@@ -148,15 +131,15 @@
             chatDiv.appendChild(msgElement);
             chatDiv.scrollTop = chatDiv.scrollHeight;
         }
-
+    
         function showError(error) {
             updateChat("Error", error);
         }
-
+    
         function showNotification(message) {
             updateChat("System", message);
         }
-
+    
         function attemptReconnect() {
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                 reconnectAttempts++;
@@ -166,7 +149,12 @@
                 console.log("Max reconnect attempts reached. Unable to reconnect.");
             }
         }
+    
+        document.getElementById("message").addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); 
+                sendMessage();
+            }
+        });
     </script>
-
-</body>
-</html>
+    

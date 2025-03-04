@@ -21,8 +21,12 @@ console.log(`[${new Date().toISOString()}] Secure WebSocket server running on ws
 wss.on('connection', (client) => {
     console.log("New client connected.");
 
-    client.username = "Anonymous";
-    client.rateLimitData = { timestamps: [], exceedCount: 0, timeoutEnd: 0 };
+    // ✅ Ensure every client has rate limit data on connection
+    client.rateLimitData = {
+        timestamps: [],
+        exceedCount: 0,
+        timeoutEnd: 0
+    };
 
     client.on('message', (data) => {
         try {
@@ -32,10 +36,10 @@ wss.on('connection', (client) => {
                     handleLogin(client, parsedData.username, parsedData.password);
                     break;
                 case "message":
-                    handleMessage(client, parsedData.username, parsedData.message);
+                    handleMessage(client, parsedData.username, parsedData.message, wss);
                     break;
                 case "join":
-                    handleJoin(client, parsedData.username, wss); // ✅ Pass wss
+                    handleJoin(client, parsedData.username, wss);
                     break;
                 default:
                     console.warn("Unknown message type received.");
@@ -45,7 +49,7 @@ wss.on('connection', (client) => {
         }
     });
 
-    client.on('close', () => handleDisconnect(client));
+    client.on('close', () => handleDisconnect(client, wss));
 });
 
 // Start HTTPS + WSS Server

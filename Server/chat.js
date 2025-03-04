@@ -1,4 +1,4 @@
-import { applyRateLimit } from './rateLimit.js';
+import { applyRateLimit } from './ratelimiting.js'; // ✅ Import rate limiting
 
 // Handle User Joining
 export function handleJoin(client, username, wss) {
@@ -21,31 +21,42 @@ export function handleJoin(client, username, wss) {
     client.send(JSON.stringify({ type: "userList", message: `Users in chat: ${userList}` }));
 }
 
-
-// Handle Incoming Messages (with Rate Limiting)
-export function handleMessage(client, username, message) {
-    if (!applyRateLimit(client)) return;
+// Handle a user sending a message
+export function handleMessage(client, username, message, wss) {
+    if (!applyRateLimit(client)) {
+        return;
+    }
 
     console.log(`Message from ${username}: ${message}`);
 
-    // Broadcast message
-    const msg = JSON.stringify({ type: "message", username, message });
-    broadcast(msg, client);
-}
-
-// Handle User Disconnection
-export function handleDisconnect(client) {
-    const disconnectMsg = JSON.stringify({
-        type: "notification",
-        message: `${client.username} disconnected.`
+    const outgoingMessage = JSON.stringify({
+        type: "message",
+        username: username,
+        message: message
     });
 
-    console.log(`${client.username} disconnected.`);
-    broadcast(disconnectMsg, client);
+    broadcast(outgoingMessage, wss, client);
 }
 
-// Broadcast Message to All Clients (Except Sender)
+// Handle a user disconnecting from the chat
+export function handleDisconnect(client, wss) {
+    console.log(`${client.username} disconnected.`);
+
+    const disconnectMsg = JSON.stringify({
+        type: "notification",
+        message: `${client.username} disconnected from chat.`
+    });
+
+    broadcast(disconnectMsg, wss, client);
+}
+
+// Broadcast a message to all connected clients (except sender)
 function broadcast(message, wss, sender = null) {
+    if (!wss || !wss.clients) {
+        console.error("WebSocket server (wss) is undefined.");
+        return;
+    }
+
     wss.clients.forEach(client => {
         if (client !== sender && client.readyState === client.OPEN) {
             client.send(message);
