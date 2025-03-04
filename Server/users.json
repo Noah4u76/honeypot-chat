@@ -2,5 +2,17 @@
   {
     "username": "user1",
     "password": "$2b$10$cW6GJg2sg8Cx2vfGRz4v2uxwrhTZzOcvxhzBcD7r0iPCtDd3vtrlu"
+  },
+  {
+    "username": "user2",
+    "password": "$2b$10$MRN22S/bUxU9lUOUXNWkru3nMCa6WIOiuGiDNlgcjZ6mSF/Nx/17e"
+  },
+  {
+    "username": "user3",
+    "password": "$2b$10$QFZ15K8A7cUcc710xcklj.YODl9nhzOoX2qkwuH4ESzXUlicrrYJC"
+  },
+  {
+    "username": "User4",
+    "password": "$2b$10$ZTdg0KW7gZyriKouC7.UmOO3/Gc6KloipPaQYHzKUr0dOjISuL5Om"
   }
 ]

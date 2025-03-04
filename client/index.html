@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure WebSocket Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #chat-area {
+            display: none;
+            margin-top: 20px;
+        }
+        #chat {
+            border: 1px solid #ccc;
+            width: 50%;
+            height: 300px;
+            overflow-y: auto;
+            margin: auto;
+            padding: 10px;
+            text-align: left;
+        }
+        input, button {
+            margin: 5px;
+            padding: 8px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Login</h2>
+    <label for="username">Username</label><br>
+    <input type="text" id="username" placeholder="Username"><br>
+    <label for="password">Password</label><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button onclick="login()">Login</button>
+
+    <div id="chat-area">
+        <h2>Chat</h2>
+        <div id="chat"></div>
+        <label for="message">Message</label><br>
+        <input type="text" id="message" placeholder="Type a message">
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        let socket;
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+        const SERVER_ADDRESS = "wss://localhost:8000"; // Change to "wss://your-local-ip:8000" for LAN
+
+        function login() {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+
+            if (!username || !password) {
+                alert("Please enter both username and password.");
+                return;
+            }
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                console.log("Already connected to WebSocket.");
+                return;
+            }
+
+            socket = new WebSocket(SERVER_ADDRESS);
+
+            socket.onopen = () => {
+                console.log("Connected to WebSocket server");
+                reconnectAttempts = 0;
+
+                socket.send(JSON.stringify({ type: "login", username, password }));
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("Received:", data);
+
+                    if (data.type === "login") {
+                        if (data.status === "success") {
+                            document.getElementById("chat-area").style.display = "block";
+                            document.getElementById("username").disabled = true;
+                            document.getElementById("password").disabled = true;
+                        } else {
+                            alert("Invalid credentials!");
+                            socket.close();
+                        }
+                    } else if (data.type === "message") {
+                        updateChat(data.username, data.message);
+                    } else if (data.type === "error") {
+                        showError(data.error);
+                    } else if (data.type === "notification") {
+                        showNotification(data.message);
+                    }
+                } catch (error) {
+                    console.error("Error processing message:", error);
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error("WebSocket Error:", error);
+                alert("WebSocket connection failed. Check server status.");
+            };
+
+            socket.onclose = () => {
+                console.log("Disconnected from WebSocket server");
+                attemptReconnect();
+            };
+        }
+
+        function sendMessage() {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                alert("WebSocket connection is not open.");
+                return;
+            }
+
+            const message = document.getElementById("message").value.trim();
+            const username = document.getElementById("username").value;
+
+            if (message === "" || message.toLowerCase() === "exit") {
+                logout();
+                return;
+            }
+
+            socket.send(JSON.stringify({ type: "message", username, message }));
+            document.getElementById("message").value = "";
+        }
+
+        function logout() {
+            if (socket) {
+                socket.close();
+            }
+            document.getElementById("chat-area").style.display = "none";
+            document.getElementById("username").disabled = false;
+            document.getElementById("password").disabled = false;
+            alert("Logged out.");
+        }
+
+        function updateChat(username, message) {
+            const chatDiv = document.getElementById("chat");
+            const msgElement = document.createElement("p");
+            msgElement.innerHTML = `<b>${username}:</b> ${message}`;
+            chatDiv.appendChild(msgElement);
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        function showError(error) {
+            updateChat("Error", error);
+        }
+
+        function showNotification(message) {
+            updateChat("System", message);
+        }
+
+        function attemptReconnect() {
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                console.log(`Reconnecting... Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+                setTimeout(() => login(), 3000);
+            } else {
+                console.log("Max reconnect attempts reached. Unable to reconnect.");
+            }
+        }
+    </script>
+
+</body>
+</html>
