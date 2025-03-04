@@ -21,28 +21,23 @@ console.log(`[${new Date().toISOString()}] Secure WebSocket server running on ws
 wss.on('connection', (client) => {
     console.log("New client connected.");
 
-    // ✅ Ensure every client has rate limit data on connection
-    client.rateLimitData = {
-        timestamps: [],
-        exceedCount: 0,
-        timeoutEnd: 0
-    };
+    client.authenticated = false;
 
     client.on('message', (data) => {
         try {
             const parsedData = JSON.parse(data);
-            switch (parsedData.type) {
-                case "login":
-                    handleLogin(client, parsedData.username, parsedData.password);
-                    break;
-                case "message":
-                    handleMessage(client, parsedData.username, parsedData.message, wss);
-                    break;
-                case "join":
-                    handleJoin(client, parsedData.username, wss);
-                    break;
-                default:
-                    console.warn("Unknown message type received.");
+
+            if (parsedData.type === "login") {
+                if (handleLogin(client, parsedData.username, parsedData.password)) {
+                    client.authenticated = true;
+                }
+            } else if (parsedData.type === "message") {
+                if (!client.authenticated) {
+                    console.warn("Blocked unauthenticated user from sending a message.");
+                    client.send(JSON.stringify({ type: "error", error: "You must be logged in to send messages." }));
+                    return;
+                }
+                handleMessage(client, parsedData.username, parsedData.message, wss);
             }
         } catch (error) {
             console.error("Failed to parse message:", error);
