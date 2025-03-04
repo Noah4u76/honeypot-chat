@@ -27,16 +27,23 @@ export function handleMessage(client, username, message, wss) {
         return;
     }
 
-    console.log(`Message from ${username}: ${message}`);
+    const sanitizedMessage = sanitizeInput(message);
+
+    console.log(`Message from ${username}: ${sanitizedMessage}`);
 
     const outgoingMessage = JSON.stringify({
         type: "message",
         username: username,
-        message: message
+        message: sanitizedMessage
     });
 
     broadcast(outgoingMessage, wss, client);
 }
+
+function sanitizeInput(input) {
+    return input.replace(/</g, "&lt;").replace(/>/g, "&gt;"); // Prevents XSS
+}
+
 
 // Handle a user disconnecting from the chat
 export function handleDisconnect(client, wss) {
