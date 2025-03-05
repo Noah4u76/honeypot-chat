@@ -2,5 +2,17 @@
   {
     "username": "Noahs",
     "password": "$2b$10$vBrw3yCDbyRoKEmGisg1O.HG17PByBF6VGWkrNqAT6Jqw22D/hQtW"
+  },
+  {
+    "username": "user1",
+    "password": "$2b$10$oex9gPManCedfu0UWwY3..8aVr5dTfHiZd/4kKnMGsbRziBR16D8a"
+  },
+  {
+    "username": "user2",
+    "password": "$2b$10$l2FsQF0mX2ylO/nOrb5bcOih8oBylH.2/Kd/sGrNOCUsXehT1rQ5a"
+  },
+  {
+    "username": "user3",
+    "password": "$2b$10$0PVdOzesyudhQMLu9dC37OWqVBPIr0NLKx4aPs24YLa07KOQj1Fgy"
   }
 ]

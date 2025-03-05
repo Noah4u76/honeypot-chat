@@ -38,6 +38,8 @@ wss.on('connection', (client) => {
                 if (loginSuccess) {
                     client.authenticated = true; // Mark as authenticated
                     console.log(`${parsedData.username} authenticated successfully.`);
+                    console.log("join occured")
+                    handleJoin(client, parsedData.username, wss);
                 }
             } else if (parsedData.type === "message") {
                 if (!client.authenticated) {
@@ -46,7 +48,7 @@ wss.on('connection', (client) => {
                     return;
                 }
                 handleMessage(client, parsedData.username, parsedData.message, wss);
-            }
+            } 
         } catch (error) {
             console.error("Error parsing message:", error.message);
             client.send(JSON.stringify({ type: "error", error: "Invalid JSON format." }));

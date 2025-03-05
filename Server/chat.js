@@ -13,12 +13,12 @@ export function handleJoin(client, username, wss) {
     broadcast(joinNotification, wss, client);
 
     // Send user list
-    const userList = Array.from(wss.clients)
+    /*const userList = Array.from(wss.clients)
         .map(c => c.username)
         .filter(name => name !== "Anonymous")
         .join(", ");
 
-    client.send(JSON.stringify({ type: "userList", message: `Users in chat: ${userList}` }));
+    client.send(JSON.stringify({ type: "userList", message: `Users in chat: ${userList}` }));*/
 }
 
 // Handle a user sending a message

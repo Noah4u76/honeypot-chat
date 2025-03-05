@@ -38,8 +38,15 @@
     <input type="password" id="password" placeholder="Password"><br>
     <button onclick="login()">Login</button>
 
+
+   
+
     <div id="chat-area">
         <h2>Chat</h2>
+        <label for="user-select">Switch User:</label>
+        <select id="user-select" onchange="switchUser()">
+            <option value="">Select User</option>
+        </select>
         <div id="chat"></div>
         <label for="message">Message</label><br>
         <input type="text" id="message" placeholder="Type a message">
@@ -101,8 +108,10 @@
                             showError(data.error);
                             break;
                         case "notification":
+                            alert("show notificationc alled")
                             showNotification(data.message);
                             break;
+
                         default:
                             console.warn("Unknown message type received:", data);
                     }
@@ -163,6 +172,9 @@
             chatDiv.appendChild(msgElement);
             chatDiv.scrollTop = chatDiv.scrollHeight;
         }
+
+
+
     
         function showError(error) {
             updateChat("Error", error);
@@ -171,6 +183,13 @@
         function showNotification(message) {
             updateChat("System", message);
         }
+
+
+        function showJoin(user) {
+            updateChat(user, "joined the chat");
+        }
+
+
     
         function attemptReconnect() {
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -188,6 +207,19 @@
                 sendMessage();
             }
         });
+
+
+
+        function loadUserList(users) {
+            const userSelect = document.getElementById("user-select");
+            userSelect.innerHTML = '<option value="">Select User</option>';
+            users.forEach(user => {
+                const option = document.createElement("option");
+                option.value = user;
+                option.textContent = user;
+                userSelect.appendChild(option);
+            });
+        }
     </script>
     
     
