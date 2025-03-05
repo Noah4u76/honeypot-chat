@@ -44,9 +44,9 @@
     <div id="chat-area">
         <h2>Chat</h2>
         <label for="user-select">Switch User:</label>
-        <select id="user-select" onchange="switchUser()">
+        <!--<select id="user-select" onchange="switchUser()">
             <option value="">Select User</option>
-        </select>
+        </select> -->
         <div id="chat"></div>
         <label for="message">Message</label><br>
         <input type="text" id="message" placeholder="Type a message">
@@ -102,14 +102,34 @@
                             }
                             break;
                         case "message":
-                            updateChat(data.username, data.message);
+                            const decryptedMessage = decrypt(data.message)
+
+                            
+                            updateChat(data.username, decryptedMessage);
                             break;
                         case "error":
-                            showError(data.error);
+                            const decryptedError = decrypt(data.error)
+
+                            showError(decryptedError);
                             break;
                         case "notification":
-                            alert("show notificationc alled")
-                            showNotification(data.message);
+
+                            const decryptedNotification = decrypt(data.message)
+
+                            showNotification(decryptedNotification);
+                            const strs = data.message;
+                            /*if(strs.includes("join"))
+                            {
+                                apenddUser(data.username);
+                            }*/
+
+
+                           /* if (strs.includes("disconnected" && data.username)) 
+                            {
+                                alert(data.username)
+
+                                removeUser(data.username);
+                            }*/
                             break;
 
                         default:
@@ -146,11 +166,12 @@
             const messageInput = document.getElementById("message");
             const message = messageInput.value.trim();
             const username = document.getElementById("username").value.trim();
+            //const toUser = 
     
             if (!message) {
                 return;
             }
-    
+            
             socket.send(JSON.stringify({ type: "message", username, message }));
             messageInput.value = "";
             messageInput.focus();
@@ -210,16 +231,45 @@
 
 
 
-        function loadUserList(users) {
-            const userSelect = document.getElementById("user-select");
-            userSelect.innerHTML = '<option value="">Select User</option>';
-            users.forEach(user => {
-                const option = document.createElement("option");
-                option.value = user;
-                option.textContent = user;
-                userSelect.appendChild(option);
-            });
+        /*function apenddUser(user) {
+        const userSelect = document.getElementById("user-select");
+        
+        // Check if the user is already in the dropdown to avoid duplicates
+        for (let i = 0; i < userSelect.options.length; i++) {
+            if (userSelect.options[i].value === user) {
+                return; // User already exists, don't add again
+            }
         }
+
+        // Create a new option element
+        const newOption = document.createElement("option");
+        newOption.value = user;
+        newOption.textContent = user;
+
+        // Append the new option to the select dropdown
+        userSelect.appendChild(newOption);
+    }
+
+
+    function removeUser(user) {
+        const userSelect = document.getElementById("user-select");
+
+        for (let i = 0; i < userSelect.options.length; i++) {
+            if (userSelect.options[i].value === user) {
+                userSelect.remove(i);
+                break;
+            }
+        }
+    }*/
+
+
+    function decrypt(message) {
+    let val = atob(message);
+    return val;
+
+}
+
+
     </script>
     
     

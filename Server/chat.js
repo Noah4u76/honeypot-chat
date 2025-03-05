@@ -1,13 +1,17 @@
 import { applyRateLimit } from './ratelimiting.js'; // ✅ Import rate limiting
+import { encrypt } from './encryption.js'; // ✅ Import encryption
 
 // Handle User Joining
 export function handleJoin(client, username, wss) {
     client.username = username;
+
+    const encryptedNotification =encrypt(`${username} joined the chat.`) 
     console.log(`${username} joined the chat.`);
 
     const joinNotification = JSON.stringify({
         type: "notification",
-        message: `${username} joined the chat.`
+        username : username,
+        message: encryptedNotification
     });
 
     broadcast(joinNotification, wss, client);
@@ -28,13 +32,15 @@ export function handleMessage(client, username, message, wss) {
     }
 
     const sanitizedMessage = sanitizeInput(message);
+    const encryptedMessage = encrypt(sanitizedMessage)
 
     console.log(`Message from ${username}: ${sanitizedMessage}`);
+    console.log(`Message from ${username}: ${encryptedMessage}`);
 
     const outgoingMessage = JSON.stringify({
         type: "message",
         username: username,
-        message: sanitizedMessage
+        message: encryptedMessage
     });
 
     broadcast(outgoingMessage, wss, client);
@@ -47,11 +53,14 @@ function sanitizeInput(input) {
 
 // Handle a user disconnecting from the chat
 export function handleDisconnect(client, wss) {
+    const encryptedNotification =encrypt(`${client.username} disconnected.`) 
+
     console.log(`${client.username} disconnected.`);
+    console.log(encryptedNotification);
 
     const disconnectMsg = JSON.stringify({
         type: "notification",
-        message: `${client.username} disconnected from chat.`
+        message: encryptedNotification
     });
 
     broadcast(disconnectMsg, wss, client);
