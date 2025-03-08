@@ -5,7 +5,7 @@ import { encrypt } from './encryption.js'; // ✅ Import encryption
 export function handleJoin(client, username, wss) {
     client.username = username;
 
-    const encryptedNotification =encrypt(`${username} joined the chat.`) 
+    const encryptedNotification =encrypt(`${username} joined the chat.`,3) 
     console.log(`${username} joined the chat.`);
 
     const joinNotification = JSON.stringify({
@@ -32,7 +32,7 @@ export function handleMessage(client, username, message, wss) {
     }
 
     const sanitizedMessage = sanitizeInput(message);
-    const encryptedMessage = encrypt(sanitizedMessage)
+    const encryptedMessage = encrypt(sanitizedMessage,3)
 
     console.log(`Message from ${username}: ${sanitizedMessage}`);
     console.log(`Message from ${username}: ${encryptedMessage}`);
@@ -53,7 +53,7 @@ function sanitizeInput(input) {
 
 // Handle a user disconnecting from the chat
 export function handleDisconnect(client, wss) {
-    const encryptedNotification =encrypt(`${client.username} disconnected.`) 
+    const encryptedNotification =encrypt(`${client.username} disconnected.`,3) 
 
     console.log(`${client.username} disconnected.`);
     console.log(encryptedNotification);
