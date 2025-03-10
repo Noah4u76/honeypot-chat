@@ -1,6 +1,6 @@
 # SecureChat
 
-SecureChat is a real-time chat system built with Node.js and WebSockets. It supports user authentication (with bcrypt for password hashing), rate limiting to prevent spamming, join/disconnect notifications, and connection handling. Although this version uses an unsecured WebSocket connection (ws://), it lays the foundation for secure team communication. In production, you can upgrade to wss:// by configuring an HTTPS server with valid certificates.
+SecureChat is a real-time chat system built with Node.js, HTML and WebSockets. It supports user authentication (with bcrypt for password hashing), rate limiting to prevent spamming, join/disconnect notifications, and connection handling. Although this version uses an unsecured WebSocket connection (ws://), it lays the foundation for secure team communication. In production, you can upgrade to wss:// by configuring an HTTPS server with valid certificates. 
 
 ## Features
 
@@ -19,6 +19,11 @@ SecureChat is a real-time chat system built with Node.js and WebSockets. It supp
 - **Connection Handling:**  
   The project detects join/disconnect events and can be extended to support additional features like heartbeat and auto-reconnect.
 
+-**End-to-End Encryption**
+  This project uses a encryption algorithm where it shifts the value of an message string a certain number of units to the right to prevent the actual message from showing and decrypts it at the client end, the server encrypts the message while the client decrypts the message
+-**Web Front End**
+It also includes a front end in which the client can join the chat by entering their credentials and if they type in the valid credentials the chat window shows up using DOM functions, whenever a someone joins or leaves the chat a message will show up in the chat, whever another user sends you a message it'll show up in the chat using the updateChat function where it appends an element to the chat-area div
+
 ## Installation
 
 Clone the repository and install dependencies:
@@ -31,7 +36,7 @@ npm install
 
 ## Running the Server
 
-By default, the server listens on port 8000 using an unsecured WebSocket connection (ws://).
+By default, the server listens on port 8000 using an secured WebSocket connection (wss://).
 
 Start the server with:
 ```bash
@@ -39,9 +44,9 @@ node server.js
 ```
 ## Running the Client
 
-Open a new terminal window for each client and run the client:
+Open a new terminal window on the client directory and run the client, the client listens and open the front end of the website on port 8001 at https://localhost:8001:
 ```bash
-node client.js
+node server.js
 ```
 
 ## Follow the on-screen prompts
