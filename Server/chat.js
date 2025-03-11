@@ -1,5 +1,5 @@
-import { applyRateLimit } from './ratelimiting.js'; // ✅ Import rate limiting
-import { encrypt } from './encryption.js'; // ✅ Import encryption
+import { applyRateLimit } from './ratelimiting.js';
+import { encrypt } from './encryption.js'; 
 
 // Handle User Joining
 export function handleJoin(client, username, wss) {

@@ -16,7 +16,7 @@ const httpsServer = https.createServer(serverOptions);
 // Create Secure WebSocket Server
 const wss = new WebSocketServer({ server: httpsServer });
 
-console.log(`[${new Date().toISOString()}] Secure WebSocket server running on wss://localhost:8000`);
+console.log(`[${new Date().toISOString()}] Secure WebSocket server running on https://0.0.0.0:8001`); // Your IP Address (Dont commit IP Address)
 
 wss.on('connection', (client) => {
     console.log("New client connected.");
@@ -59,6 +59,6 @@ wss.on('connection', (client) => {
 });
 
 // Start HTTPS + WSS Server
-httpsServer.listen(8000, '0.0.0.0', () => {
-    console.log(`Secure WebSocket server running on https://0.0.0.0:8000`); // Your IP Address (Dont commit IP Address)
+httpsServer.listen(8001, '0.0.0.0', () => {
+    console.log(`Secure WebSocket server running on https://0.0.0.0:8001`); // Your IP Address (Dont commit IP Address)
 });
