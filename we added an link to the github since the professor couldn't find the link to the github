@@ -1,3 +1,6 @@
+#Link to GitHub Repository
+https://github.com/kushpatelj86/CPSC-455-Project.git
+
 # SecureChat
 
 SecureChat is a real-time chat system built with Node.js, HTML and WebSockets. It supports user authentication (with bcrypt for password hashing), rate limiting to prevent spamming, join/disconnect notifications, and connection handling. Although this version uses an unsecured WebSocket connection (ws://), it lays the foundation for secure team communication. In production, you can upgrade to wss:// by configuring an HTTPS server with valid certificates. 
