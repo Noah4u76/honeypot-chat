@@ -60,5 +60,5 @@ wss.on('connection', (client) => {
 
 // Start HTTPS + WSS Server
 httpsServer.listen(8000, '0.0.0.0', () => {
-    console.log(`Secure WebSocket server running on https://localhost:8000`);
+    console.log(`Secure WebSocket server running on https://0.0.0.0:8000`); // Your IP Address (Dont commit IP Address)
 });
