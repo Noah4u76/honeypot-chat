@@ -19,7 +19,7 @@ export function applyRateLimit(client) {
     if (now < client.rateLimitData.timeoutEnd) {
         const remaining = Math.ceil((client.rateLimitData.timeoutEnd - now) / 1000);
         client.send(JSON.stringify({ type: "error", error: `Rate limit exceeded. Wait ${remaining} seconds.` }));
-        return false; // ❌ Do not allow message
+        return false;
     }
 
     // Remove timestamps older than RATE_LIMIT_WINDOW_MS (5 seconds)
@@ -39,11 +39,11 @@ export function applyRateLimit(client) {
         client.send(JSON.stringify({ type: "error", error: `Rate limit exceeded. Timed out for ${timeoutDuration / 1000} seconds.` }));
         console.warn(`Rate limit exceeded for ${client.username}. Timed out for ${timeoutDuration / 1000} seconds.`);
 
-        return false; // ❌ Block message
+        return false;
     }
 
     // Add new message timestamp
     client.rateLimitData.timestamps.push(now);
 
-    return true; // ✅ Allow message
+    return true;
 }
