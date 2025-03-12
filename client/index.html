@@ -28,6 +28,8 @@
             font-size: 16px;
         }
     </style>
+    <!-- Include the crypto-js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
     <h2>Login</h2>
@@ -46,7 +48,6 @@
         <button id="logout-btn">Logout</button>
     </div>
 
-    <script src="client.js"></script>  <!-- Loads client.js -->
+    <script type="module" src="client.js"></script>  <!-- Loads client.js -->
 </body>
-
 </html>

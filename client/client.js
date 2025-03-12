@@ -1,11 +1,10 @@
-import crypto from 'crypto';
 
 
 let socket;
 let isAuthenticated = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
-const SERVER_ADDRESS = "wss://0.0.0.0:8001"; // Change for LAN: Need for front end to work with backend. Temporary solution.
+const SERVER_ADDRESS = "wss://192.168.1.233:8001"; // Change for LAN: Need for front end to work with backend. Temporary solution.
 
 // Get Elements
 const usernameInput = document.getElementById("username");
@@ -16,6 +15,39 @@ const chatBox = document.getElementById("chat");
 const messageInput = document.getElementById("message");
 const sendButton = document.getElementById("send-btn");
 const logoutButton = document.getElementById("logout-btn");
+
+
+
+// No import needed; CryptoJS is available globally from the CDN
+const secretKey = "your_super_secret_key";
+const iv = CryptoJS.lib.WordArray.random(16); // IV should be random for each encryption
+
+function encrypt(text) {
+    const encrypted = CryptoJS.AES.encrypt(text, CryptoJS.enc.Utf8.parse(secretKey), {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    });
+    return iv.toString(CryptoJS.enc.Hex) + encrypted.toString(); // Append IV to encrypted text
+}
+
+ function decrypt(encryptedText) {
+    const ivHex = encryptedText.substring(0, 32);
+    const encrypted = encryptedText.substring(32);
+
+    const iv = CryptoJS.enc.Hex.parse(ivHex);
+    const decrypted = CryptoJS.AES.decrypt(encrypted, CryptoJS.enc.Utf8.parse(secretKey), {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    });
+
+    return decrypted.toString(CryptoJS.enc.Utf8);
+}
+
+
+
+
 
 // Connect WebSocket
 function connectWebSocket() {
@@ -45,18 +77,17 @@ function connectWebSocket() {
                     break;
     
                 case "message":
-                    const decrypted_message = decrypt(data.message);
-                    updateChat(data.username, decrypted_message);
+                    const decrypted_message = decrypt(data.message)
+                    alert(decrypted_message)
+                    updateChat(data.username, data.message);
                     break;
     
                 case "error":
-                    const decrypted_error = decrypt(data.error);
-                    showError(decrypted_error);
+                    showError(data.error);
                     break;
     
                 case "notification":
-                    const decrypted_notifcation= decrypt(data.message);
-                    showNotification(decrypted_notifcation);
+                    showNotification(data.message);
                     break;
     
                 default:
@@ -69,6 +100,12 @@ function connectWebSocket() {
     
     
 }
+
+
+
+
+
+
 
 // Login Function
 function login() {
@@ -139,18 +176,6 @@ function attemptReconnect() {
         console.log("Max reconnect attempts reached. Unable to reconnect.");
     }
 }
-
-
-export function decrypt(encryptedText) {
-    const iv = Buffer.from(encryptedText.substring(0, 32), 'hex');
-    const encrypted = encryptedText.substring(32);
-    const decipher = crypto.createDecipheriv(algorithm, secretKey, iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-}
-
-
 
 // Send message on Enter key press
 messageInput.addEventListener("keypress", function (event) {
