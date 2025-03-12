@@ -1,3 +1,6 @@
+import crypto from 'crypto';
+
+
 let socket;
 let isAuthenticated = false;
 let reconnectAttempts = 0;
@@ -42,15 +45,18 @@ function connectWebSocket() {
                     break;
     
                 case "message":
-                    updateChat(data.username, data.message);
+                    const decrypted_message = decrypt(data.message);
+                    updateChat(data.username, decrypted_message);
                     break;
     
                 case "error":
-                    showError(data.error);
+                    const decrypted_error = decrypt(data.error);
+                    showError(decrypted_error);
                     break;
     
                 case "notification":
-                    showNotification(data.message);
+                    const decrypted_notifcation= decrypt(data.message);
+                    showNotification(decrypted_notifcation);
                     break;
     
                 default:
@@ -133,6 +139,18 @@ function attemptReconnect() {
         console.log("Max reconnect attempts reached. Unable to reconnect.");
     }
 }
+
+
+export function decrypt(encryptedText) {
+    const iv = Buffer.from(encryptedText.substring(0, 32), 'hex');
+    const encrypted = encryptedText.substring(32);
+    const decipher = crypto.createDecipheriv(algorithm, secretKey, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+}
+
+
 
 // Send message on Enter key press
 messageInput.addEventListener("keypress", function (event) {
