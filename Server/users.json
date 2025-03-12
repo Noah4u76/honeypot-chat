@@ -38,5 +38,13 @@
   {
     "username": "User9",
     "password": "$2b$10$/beBpZIIuBWpVOg0wUH6peUiRfepmh5zUkQ1df8BcRO.ZuIOeCRc6"
+  },
+  {
+    "username": "User10",
+    "password": "$2b$10$986STi6lgaAQqwi.dm0XNudbg3QwLr4v3aJdVZf.xTkbdS4T4NqKu"
+  },
+  {
+    "username": "User11",
+    "password": "$2b$10$R9KoFoEVryhGIWz1lnbH5uLIempLPUS09hRxtjS.lcVOvr2DkpIEG"
   }
 ]
