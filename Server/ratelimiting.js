@@ -1,6 +1,6 @@
-const RATE_LIMIT_WINDOW_MS = 5000; // 5 seconds
+const RATE_LIMIT_WINDOW_MS = 5000;
 const MAX_MESSAGES_PER_WINDOW = 5;
-const RESET_VIOLATION_WINDOW_MS = 60000; // 1 min timeout reset
+const RESET_VIOLATION_WINDOW_MS = 60000;
 
 export function applyRateLimit(client) {
     const now = Date.now();

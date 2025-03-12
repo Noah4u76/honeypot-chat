@@ -1,64 +1,77 @@
 import https from 'https';
 import fs from 'fs';
+import path from 'path';
+import express from 'express';
 import { WebSocketServer } from 'ws';
+import { fileURLToPath } from 'url';
+
 import { handleLogin } from './auth.js';
 import { handleMessage, handleJoin, handleDisconnect } from './chat.js';
 
-// Load SSL/TLS Certificates
+// Paths & Directories Setup
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// SSL/TLS Certificates
+const CERT_PATH = path.join(__dirname, '../certs');
 const serverOptions = {
-    key: fs.readFileSync('../certs/key.pem'),
-    cert: fs.readFileSync('../certs/cert.pem')
+    key: fs.readFileSync(path.join(CERT_PATH, 'key.pem')),
+    cert: fs.readFileSync(path.join(CERT_PATH, 'cert.pem'))
 };
 
-// Create HTTPS Server (Required for WSS)
-const httpsServer = https.createServer(serverOptions);
+// Express Server
+const app = express();
+const STATIC_DIR = path.join(__dirname, '../client');
+app.use(express.static(STATIC_DIR));
 
-// Create Secure WebSocket Server
+app.get('/', (req, res) => {
+    res.sendFile(path.join(STATIC_DIR, 'index.html'));
+});
+
+// Create HTTPS Server
+const httpsServer = https.createServer(serverOptions, app);
 const wss = new WebSocketServer({ server: httpsServer });
 
-console.log(`[${new Date().toISOString()}] Secure WebSocket server running on https://0.0.0.0:8001`); // Your IP Address (Dont commit IP Address)
+console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection
 
 wss.on('connection', (client) => {
     console.log("New client connected.");
-    client.authenticated = false; // Ensure client is marked unauthenticated initially
+    client.authenticated = false;
 
     client.on('message', async (data) => {
         try {
-            const message = typeof data === "string" ? data.trim() : data.toString().trim();
+            const parsedData = JSON.parse(data);
+            console.log("Received:", parsedData);
 
-            if (!message) {
-                console.warn("Received empty message. Ignoring.");
-                return;
+            switch (parsedData.type) {
+                case "login":
+                    const success = await handleLogin(client, parsedData.username, parsedData.password);
+                    client.authenticated = success;
+                    client.send(JSON.stringify({ type: "login", status: success ? "success" : "fail" }));
+
+                    if (success) {
+                        handleJoin(client, parsedData.username, wss);
+                    }
+                    break;
+
+                case "message":
+                    if (!client.authenticated) {
+                        client.send(JSON.stringify({ type: "error", error: "You must be logged in to send messages." }));
+                        return;
+                    }
+                    handleMessage(client, parsedData.username, parsedData.message, wss);
+                    break;
             }
-
-            const parsedData = JSON.parse(message);
-
-            if (parsedData.type === "login") {
-                const loginSuccess = await handleLogin(client, parsedData.username, parsedData.password);
-                if (loginSuccess) {
-                    client.authenticated = true; // Mark as authenticated
-                    console.log(`${parsedData.username} authenticated successfully.`);
-                    console.log("join occured")
-                    handleJoin(client, parsedData.username, wss);
-                }
-            } else if (parsedData.type === "message") {
-                if (!client.authenticated) {
-                    console.warn("Blocked unauthenticated user from sending a message.");
-                    client.send(JSON.stringify({ type: "error", error: "You must be logged in to send messages." }));
-                    return;
-                }
-                handleMessage(client, parsedData.username, parsedData.message, wss);
-            } 
         } catch (error) {
-            console.error("Error parsing message:", error.message);
-            client.send(JSON.stringify({ type: "error", error: "Invalid JSON format." }));
+            console.error("Error processing message:", error);
         }
     });
 
-    client.on('close', () => handleDisconnect(client, wss));
+    client.on('close', () => {
+        console.log("Client disconnected.");
+        handleDisconnect(client, wss);
+    });
 });
 
-// Start HTTPS + WSS Server
-httpsServer.listen(8001, '0.0.0.0', () => {
-    console.log(`Secure WebSocket server running on https://0.0.0.0:8001`); // Your IP Address (Dont commit IP Address)
-});
+
+httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection

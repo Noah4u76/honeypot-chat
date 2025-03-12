@@ -18,5 +18,25 @@
   {
     "username": "User4",
     "password": "$2b$10$wek9uFQnaH0Zj23c0dZ5WeKx1gsxQxpSDW3m/8ZGm9lt8Y7O7wFhS"
+  },
+  {
+    "username": "User5",
+    "password": "$2b$10$2je9199nq/7l4CE5vvnbte0d.3dtxUqGPzbLDjQlfetpkh8HpK4kq"
+  },
+  {
+    "username": "User6",
+    "password": "$2b$10$WfdngFozk1p5kfN1Yu7Vn.yvtwNfmoPTE0DhnraLQxCrOEd2J2X.W"
+  },
+  {
+    "username": "User7",
+    "password": "$2b$10$cXWgr57dCoi7BHFLp1rQZenK71nCz24ww546niJ0GpmFGY8FGmTFq"
+  },
+  {
+    "username": "User8",
+    "password": "$2b$10$9DVAswRyf6ZFqMVDXSu1iOBURwcEeTmwsQL4RKX92Kr3AKkdEr0Ou"
+  },
+  {
+    "username": "User9",
+    "password": "$2b$10$/beBpZIIuBWpVOg0wUH6peUiRfepmh5zUkQ1df8BcRO.ZuIOeCRc6"
   }
 ]
