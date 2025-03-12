@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure WebSocket Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #chat-area {
+            display: none;
+            margin-top: 20px;
+        }
+        #chat {
+            border: 1px solid #ccc;
+            width: 50%;
+            height: 300px;
+            overflow-y: auto;
+            margin: auto;
+            padding: 10px;
+            text-align: left;
+        }
+        input, button {
+            margin: 5px;
+            padding: 8px;
+            font-size: 16px;
+        }
+    </style>
+    <!-- Include the crypto-js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <h2>Login</h2>
+    <label for="username">Username</label><br>
+    <input type="text" id="username" placeholder="Username"><br>
+    <label for="password">Password</label><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button id="login-btn">Login</button>
+
+    <div id="chat-area" style="display: none;"> 
+        <h2>Chat</h2>
+        <div id="chat"></div>
+        <label for="message">Message</label><br>
+        <input type="text" id="message" placeholder="Type a message">
+        <button id="send-btn">Send</button>
+        <button id="logout-btn">Logout</button>
+    </div>
+
+    <script type="module" src="client.js"></script>  <!-- Loads client.js -->
+</body>
+</html>
