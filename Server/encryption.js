@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-cbc';
-// Hardcoded key for testing (64 hex characters = 32 bytes) DONT DO THIS IS PRODUCTION
+// Hardcoded key for testing (64 hex characters = 32 bytes) DONT DO THIS IN PRODUCTION
 const SECRET_KEY = Buffer.from("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "hex");
 
 // Encrypt Message

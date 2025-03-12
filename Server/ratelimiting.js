@@ -31,7 +31,7 @@ export function applyRateLimit(client) {
     client.rateLimitData.exceedCount++;
     client.rateLimitData.lastViolationTime = now;
 
-            // Increase timeout duration based on number of violations
+    // Increase timeout duration based on number of violations
     const timeoutDuration = client.rateLimitData.exceedCount * 10000; // 10 seconds per violation
     client.rateLimitData.timeoutEnd = now + timeoutDuration;
     client.send(JSON.stringify({ type: "error", error: `Rate limit exceeded. Timed out for ${timeoutDuration / 1000} seconds.` }));
