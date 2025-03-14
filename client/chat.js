@@ -1,4 +1,4 @@
-const SERVER_ADDRESS = "wss://0.0.0.0:8001"; //Change IP before commiting
+const SERVER_ADDRESS = "wss://localhost:8001"; //Change IP before commiting
 const socket = new WebSocket(SERVER_ADDRESS);
 
 const username = localStorage.getItem("username");
@@ -36,6 +36,23 @@ socket.onmessage = (event) => {
       });
   } else if (data.type === "error") {
     console.error("Error from server:", data.error);
+  } else if (data.type === "file") {
+
+      alert("Receivedf message");
+
+      window.decrypt(data.data)
+      .then((decryptedData) => {
+        
+        //write a new file and display the download link with the decryptedData
+        alert("Being show")
+        displayFileLink(data.filename, decryptedData);
+      })
+      .catch((err) => {
+        console.error("Decryption failed:", err);
+      });
+
+
+
   }
 };
 
@@ -50,11 +67,49 @@ document.getElementById("message").addEventListener("keypress", function (event)
 
 function sendMessage() {
   const messageInput = document.getElementById("message");
+  const fileInput = document.getElementById("fileInput");
+
   const message = messageInput.value.trim();
-  if (!message) return;
+  const file = fileInput.files[0];
+
+  if (!message && !file) return; // Do nothing if both are empty
   // Send plain text message; the server will encrypt it.
-  socket.send(JSON.stringify({ type: "message", username, message }));
-  messageInput.value = "";
+  
+
+  if (!fileInput) return;
+
+  if(message)
+  {
+    socket.send(JSON.stringify({ type: "message", username, message }));
+    messageInput.value = "";
+  }
+
+
+  if (file) {
+    alert("Contains data");
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+        const fileData = event.target.result; 
+
+        socket.send(JSON.stringify({
+            type: "file",
+            username,
+            filename: file.name,
+            filetype: file.type,
+            data: fileData
+        }));
+
+        console.log("File sent:", file.name); 
+        fileInput.value = ""; 
+    };
+
+    reader.readAsText(file); 
+}
+
+
+
+
 }
 
 document.getElementById("logout-btn").addEventListener("click", () => {
@@ -70,6 +125,35 @@ function displayMessage(user, message, type) {
   chatDiv.appendChild(msgElement);
   chatDiv.scrollTop = chatDiv.scrollHeight;
 }
+
+
+function displayFileLink(filename, text) {
+  const chatDiv = document.getElementById("messages");
+  
+  const msgElement = document.createElement("div");
+  msgElement.classList.add("message", "received"); 
+
+  const fileElement = document.createElement("a");
+  fileElement.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+  fileElement.setAttribute('download', filename);
+  
+  fileElement.innerText = `Download file: ${filename}`;
+  
+  fileElement.style.color = 'blue';
+  fileElement.style.textDecoration = 'underline';
+
+  msgElement.appendChild(fileElement);
+
+  chatDiv.appendChild(msgElement);
+
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+
+
+
+
+
 
 function displaySystemMessage(message) {
   const chatDiv = document.getElementById("messages");

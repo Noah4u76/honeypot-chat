@@ -25,6 +25,18 @@ export function handleMessage(client, username, message, wss) {
   broadcast(outgoing, wss);
 }
 
+
+//Handles file sharing
+export function handleFile(client, username,sentfilename,sentfiletype ,contents, wss) {
+  if (!applyRateLimit(client)) return;
+  const encryptedContents = encrypt(contents);
+  console.log(`Contents from ${username}: ${contents}`);
+
+  const outgoing = JSON.stringify({ type: "file", username,filename: sentfilename,
+  filetype:sentfiletype, data: encryptedContents });
+  broadcast(outgoing, wss);
+}
+
 // Handle User Disconnecting
 export function handleDisconnect(client, wss) {
   console.log(`${client.username} disconnected.`);

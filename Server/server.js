@@ -6,7 +6,7 @@ import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 
 import { handleLogin } from './auth.js';
-import { handleMessage, handleJoin, handleDisconnect } from './chat.js';
+import { handleMessage, handleJoin, handleDisconnect, handleFile } from './chat.js';
 
 // Paths & Directories Setup
 const __filename = fileURLToPath(import.meta.url);
@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 const httpsServer = https.createServer(serverOptions, app);
 const wss = new WebSocketServer({ server: httpsServer });
 
-console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection DONT COMMIT IP
+console.log(`[${new Date().toISOString()}] Server running on https://localhost:8001`); //Change to IP, for debugging connection DONT COMMIT IP
 
 wss.on('connection', (client) => {
   console.log("New client connected.");
@@ -41,6 +41,7 @@ wss.on('connection', (client) => {
 
   client.on('message', async (data) => {
     try {
+      console.log(data);
       const parsedData = JSON.parse(data);
       console.log("Received:", parsedData);
       console.log("Server received raw data:", data);
@@ -66,6 +67,17 @@ wss.on('connection', (client) => {
           }
           handleMessage(client, parsedData.username, parsedData.message, wss);
           break;
+
+        case "file":
+          if (!client.authenticated) {
+            client.send(JSON.stringify({ type: "error", error: "You must be logged in to send messages." }));
+            return;
+          }
+
+          handleFile(client,parsedData.username, parsedData.filename,parsedData.filetype, parsedData.data,wss);
+          break;
+
+
       }
     } catch (error) {
       console.error("Error processing message:", error);
@@ -78,4 +90,4 @@ wss.on('connection', (client) => {
   });
 });
 
-httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
+httpsServer.listen(8001, () => console.log(`HTTPS running on https://localhost:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
