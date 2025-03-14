@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 const httpsServer = https.createServer(serverOptions, app);
 const wss = new WebSocketServer({ server: httpsServer });
 
-console.log(`[${new Date().toISOString()}] Server running on https://localhost:8001`); //Change to IP, for debugging connection DONT COMMIT IP
+console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection DONT COMMIT IP
 
 wss.on('connection', (client) => {
   console.log("New client connected.");
@@ -90,4 +90,4 @@ wss.on('connection', (client) => {
   });
 });
 
-httpsServer.listen(8001, () => console.log(`HTTPS running on https://localhost:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
+httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
