@@ -1,14 +1,35 @@
 import { applyRateLimit } from './ratelimiting.js';
 import { encrypt } from './encryption.js';
 
+let userList = []
+
+
+
+function addUser(username)
+{
+  userList.push(username);
+}
+
+
+
+function removeUser(username)
+{
+  const index = userList.indexOf(username)
+  if (index > -1) { 
+    userList.splice(index, 1); // Remove 1 element at the found index
+  }
+}
+
 // Handle User Joining
 export function handleJoin(client, username, wss) {
   client.username = username;
   console.log(`${username} joined the chat.`);
-
+  addUser(username);
+  console.log("herre is the list ", userList)
   const notification = JSON.stringify({
     type: "notification",
     username,
+    userList,
     message: encrypt(`${username} joined the chat.`)
   });
 
@@ -39,9 +60,13 @@ export function handleFile(client, username,sentfilename,sentfiletype ,contents,
 
 // Handle User Disconnecting
 export function handleDisconnect(client, wss) {
+  removeUser(client.username);
   console.log(`${client.username} disconnected.`);
+  console.log("herre is the list ", userList)
+
   const disconnectMsg = JSON.stringify({
     type: "notification",
+    userList,
     message: encrypt(`${client.username} disconnected.`)
   });
 
