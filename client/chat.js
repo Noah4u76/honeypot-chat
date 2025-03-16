@@ -1,5 +1,6 @@
-const SERVER_ADDRESS = "wss://0.0.0.0:8001"; //Change IP before commiting
+const SERVER_ADDRESS = "wss://localhost:8001"; //Change IP before commiting
 const socket = new WebSocket(SERVER_ADDRESS);
+let userList = []
 
 const username = localStorage.getItem("username");
 if (!username) {
@@ -29,6 +30,17 @@ socket.onmessage = (event) => {
   } else if (data.type === "notification") {
     window.decrypt(data.message)
       .then((decryptedMessage) => {
+        alert(decryptedMessage)
+        if(decryptedMessage.indexOf("joined") !== -1)
+        {
+          alert("username is added")
+          addUser(data.username);
+        }
+        if(decryptedMessage.indexOf("disconnected") !== -1)
+        {
+          alert("username is removed")
+          removeUser(data.username);
+        }
         displaySystemMessage(decryptedMessage);
       })
       .catch((err) => {
@@ -149,8 +161,18 @@ function displayFileLink(filename, text) {
   chatDiv.scrollTop = chatDiv.scrollHeight;
 }
 
+function addUser(username)
+{
+  userList.push(username);
+}
 
-
+function removeUser(username)
+{
+  const index = userList.indexOf(username)
+  if (index > -1) { 
+    userList.splice(index, 1); // Remove 1 element at the found index
+  }
+}
 
 
 
