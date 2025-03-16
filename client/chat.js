@@ -1,4 +1,4 @@
-const SERVER_ADDRESS = "wss://localhost:8001"; //Change IP before commiting
+const SERVER_ADDRESS = "wss://0.0.0.0:8001"; //Change IP before commiting
 const socket = new WebSocket(SERVER_ADDRESS);
 let userList = []
 const username = localStorage.getItem("username");
