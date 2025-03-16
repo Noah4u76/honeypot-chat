@@ -11,6 +11,10 @@ if (!username) {
 socket.onopen = () => {
   // After opening WebSocket, send "join" with the username
   socket.send(JSON.stringify({ type: "join", username }));
+  if(userList.length === 0)
+  {
+      addUser(username);
+  }
 };
 
 socket.onmessage = (event) => {
@@ -163,11 +167,40 @@ function displayFileLink(filename, text) {
 
 function addUser(username)
 {
+
+  const selectElement = document.getElementById('who-to-send'); // Get the select element
+  const newOption = document.createElement('option'); // Create a new option element
+  newOption.value = username;
+  newOption.text = `${username}`;
+  selectElement.append(newOption)
+
+  userList.forEach((element) =>
+  {
+    const existingOption = document.createElement('option'); // Create a new option element
+    existingOption.value = element;
+    existingOption.text = `${element}`;
+    selectElement.append(existingOption);
+
+  }
+  
+  )
+
+
   userList.push(username);
 }
 
 function removeUser(username)
 {
+
+
+  const selectElement = document.getElementById('who-to-send');
+  for (let i = 0; i < selectElement.options.length; i++) {
+      if (selectElement.options[i].value === value) {
+          selectElement.remove(i);
+          break; // Exit the loop after removing the option
+      }
+  }
+
   const index = userList.indexOf(username)
   if (index > -1) { 
     userList.splice(index, 1); // Remove 1 element at the found index
