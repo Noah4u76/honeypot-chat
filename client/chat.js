@@ -41,14 +41,16 @@ socket.onmessage = (event) => {
   console.log("Parsed data:", data);
 
   if (data.type === "message") {
+    // Decrypt and display a text message.
     window.decrypt(data.message)
       .then((decryptedMessage) => {
-        // Determine conversation key.
+        // Figure out which conversation this belongs to.
         let convKey = "All";
         if (data.reciever && data.reciever !== "All") {
-          convKey = [username, data.username].sort().join("|");
+          convKey = [data.username, data.reciever].sort().join("|");
         }
-        // If the message is from self, check if we already added it optimistically.
+
+        // Check for duplicate self-message (optimistic display).
         if (data.username === username) {
           const convHistory = conversations[convKey] || [];
           const lastMsg = convHistory[convHistory.length - 1];
@@ -57,6 +59,7 @@ socket.onmessage = (event) => {
             return;
           }
         }
+
         displayMessage(
           data.username,
           decryptedMessage,
@@ -67,22 +70,31 @@ socket.onmessage = (event) => {
       .catch((err) => {
         console.error("Decryption failed:", err);
       });
+
   } else if (data.type === "notification") {
+    // User join/leave notifications
     changeUserList(data.userList);
     window.decrypt(data.message)
       .then((decryptedMessage) => {
-        // Always store system notifications in the global conversation.
         displaySystemMessage(decryptedMessage);
       })
       .catch((err) => {
         console.error("Decryption failed:", err);
       });
+
   } else if (data.type === "error") {
     console.error("Error from server:", data.error);
+
   } else if (data.type === "file") {
+    // Decrypt and display a file message.
     window.decrypt(data.data)
       .then((decryptedData) => {
-        displayFileLink(data.filename, decryptedData);
+        let convKey = "All";
+        if (data.reciever && data.reciever !== "All") {
+          convKey = [data.username, data.reciever].sort().join("|");
+        }
+        // Show the file link with correct sender styling.
+        displayFileLink(data.filename, decryptedData, convKey, data.username);
       })
       .catch((err) => {
         console.error("Decryption failed:", err);
@@ -128,13 +140,14 @@ function sendMessage() {
     convKey = [username, reciever].sort().join("|");
   }
 
+  // If it's a text message, show it immediately.
   if (message) {
-    // Optimistically display the message immediately.
     displayMessage(username, message, "sent", convKey);
     socket.send(JSON.stringify({ type: "message", username, reciever, message }));
     messageInput.value = "";
   }
 
+  // If it's a file, read and send it.
   if (file) {
     const reader = new FileReader();
     reader.onload = function (event) {
@@ -150,7 +163,7 @@ function sendMessage() {
       console.log("File sent:", file.name);
       fileInput.value = "";
     };
-    reader.readAsText(file);
+    reader.readAsDataURL(file);
   }
 }
 
@@ -182,32 +195,71 @@ function loadConversation() {
   const chatDiv = document.getElementById("messages");
   chatDiv.innerHTML = ""; // Clear current messages.
   const messages = conversations[activeConversation] || [];
+  
   messages.forEach(msg => {
+    // Decide if it's from self or another user
+    const cssClass = msg.user === username ? "sent" : "received";
     const msgElement = document.createElement("div");
-    msgElement.classList.add("message", msg.type);
-    msgElement.innerHTML = `<b>${msg.user}:</b> ${msg.message}`;
+    msgElement.classList.add("message", cssClass);
+
+    if (msg.type === "file") {
+      // For file messages, create a download link
+      msgElement.innerHTML = `<b>${msg.user}:</b> `;
+      const fileElement = document.createElement("a");
+      fileElement.setAttribute("href", msg.fileData);
+      fileElement.setAttribute("download", msg.filename);
+      fileElement.innerText = `Download file: ${msg.filename}`;
+      fileElement.style.color = "blue";
+      fileElement.style.textDecoration = "underline";
+      msgElement.appendChild(fileElement);
+    } else {
+      // For text messages
+      msgElement.innerHTML = `<b>${msg.user}:</b> ${msg.message}`;
+    }
+
     chatDiv.appendChild(msgElement);
   });
+
   chatDiv.scrollTop = chatDiv.scrollHeight;
   updateConversationHeader();
 }
 
-// Displays a download link for files.
-function displayFileLink(filename, text) {
-  const chatDiv = document.getElementById("messages");
-  const msgElement = document.createElement("div");
-  msgElement.classList.add("message", "received");
+// Displays a download link for file messages with correct bubble styling.
+function displayFileLink(filename, fileData, convKey, sender) {
+  if (!conversations[convKey]) {
+    conversations[convKey] = [];
+  }
+  
+  // We'll store the file message with type "file" so we can re-render it properly.
+  const messageObj = {
+    user: sender,
+    type: "file",
+    filename: filename,
+    fileData: fileData
+  };
+  conversations[convKey].push(messageObj);
 
-  const fileElement = document.createElement("a");
-  fileElement.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-  fileElement.setAttribute('download', filename);
-  fileElement.innerText = `Download file: ${filename}`;
-  fileElement.style.color = 'blue';
-  fileElement.style.textDecoration = 'underline';
+  // If the active conversation matches, display immediately.
+  if (activeConversation === convKey) {
+    const chatDiv = document.getElementById("messages");
+    // If sender is the current user, use "sent", else "received"
+    const cssClass = sender === username ? "sent" : "received";
 
-  msgElement.appendChild(fileElement);
-  chatDiv.appendChild(msgElement);
-  chatDiv.scrollTop = chatDiv.scrollHeight;
+    const msgElement = document.createElement("div");
+    msgElement.classList.add("message", cssClass);
+    msgElement.innerHTML = `<b>${sender}:</b> `;
+
+    const fileElement = document.createElement("a");
+    fileElement.setAttribute("href", fileData);
+    fileElement.setAttribute("download", filename);
+    fileElement.innerText = `Download file: ${filename}`;
+    fileElement.style.color = "blue";
+    fileElement.style.textDecoration = "underline";
+
+    msgElement.appendChild(fileElement);
+    chatDiv.appendChild(msgElement);
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  }
 }
 
 // Updates the user selection dropdown with the provided user list.
@@ -229,13 +281,11 @@ function changeUserList(userlist) {
 
 // Displays system messages (like join/leave notifications) in the global conversation.
 function displaySystemMessage(message) {
-  // Always store system notifications in the global ("All") conversation.
   if (!conversations["All"]) {
     conversations["All"] = [];
   }
   conversations["All"].push({ user: "System", message, type: "received" });
   
-  // If the active conversation is global, display the system message.
   if (activeConversation === "All") {
     const chatDiv = document.getElementById("messages");
     const msgElement = document.createElement("div");

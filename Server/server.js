@@ -74,9 +74,9 @@ wss.on('connection', (client) => {
             client.send(JSON.stringify({ type: "error", error: "You must be logged in to send messages." }));
             return;
           }
-
-          handleFile(client,parsedData.username, parsedData.filename,parsedData.filetype, parsedData.data,wss);
+          handleFile(client, parsedData.username, parsedData.filename, parsedData.filetype, parsedData.data, parsedData.reciever, wss);
           break;
+          
 
 
       }
