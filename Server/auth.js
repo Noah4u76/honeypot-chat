@@ -1,7 +1,9 @@
 import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
+import path from 'path';
 
-const usersFile = "users.json";
+// Use the current working directory as the base path for users.json
+const usersFile = path.join(process.cwd(), "users.json");
 
 export async function handleLogin(client, username, password) {
   if (!username || !password) {
@@ -13,10 +15,20 @@ export async function handleLogin(client, username, password) {
   try {
     const data = await fs.readFile(usersFile, 'utf8');
     users = data.trim() ? JSON.parse(data) : [];
+    console.log("Loaded users:", users);
   } catch (error) {
     if (error.code === 'ENOENT') {
-      await fs.writeFile(usersFile, JSON.stringify([], null, 2));
+      console.log("users.json not found, creating a new one at", usersFile);
+      try {
+        await fs.writeFile(usersFile, JSON.stringify([], null, 2));
+        users = [];
+      } catch (err) {
+        console.error("Error creating users.json:", err);
+        client.send(JSON.stringify({ type: "error", error: "Server error." }));
+        return false;
+      }
     } else {
+      console.error("Error reading users.json:", error);
       client.send(JSON.stringify({ type: "error", error: "Server error." }));
       return false;
     }
@@ -26,7 +38,14 @@ export async function handleLogin(client, username, password) {
   if (!user) {
     const hash = await bcrypt.hash(password, 10);
     users.push({ username, password: hash });
-    await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
+    try {
+      await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
+      console.log(`Created new user account for ${username}. Updated users.json:`, users);
+    } catch (err) {
+      console.error("Error writing to users.json:", err);
+      client.send(JSON.stringify({ type: "error", error: "Server error." }));
+      return false;
+    }
     client.send(JSON.stringify({ type: "login", status: "success" }));
     return true;
   } else {
