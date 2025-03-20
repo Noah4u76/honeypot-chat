@@ -37,14 +37,31 @@ export function handleJoin(client, username, wss) {
 }
 
 // Handle Messages
-export function handleMessage(client, username, message, wss) {
+export function handleMessage(client, username, message, reciever, wss) {
   if (!applyRateLimit(client)) return;
   const encryptedMessage = encrypt(message);
-  console.log(`Message from ${username}: ${message}`);
+  console.log(`Message from ${username} to ${reciever}: ${message}`);
 
-  const outgoing = JSON.stringify({ type: "message", username, message: encryptedMessage });
-  broadcast(outgoing, wss);
+  const outgoing = JSON.stringify({ 
+    type: "message", 
+    username, 
+    reciever, 
+    message: encryptedMessage 
+  });
+
+  if (reciever === "All") {
+    // Broadcast to everyone
+    broadcast(outgoing, wss);
+  } else {
+    // Send only to the sender and the specific recipient
+    wss.clients.forEach(c => {
+      if (c.readyState === c.OPEN && (c.username === reciever || c.username === username)) {
+        c.send(outgoing);
+      }
+    });
+  }
 }
+
 
 
 //Handles file sharing

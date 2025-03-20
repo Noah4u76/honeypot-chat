@@ -46,5 +46,13 @@
   {
     "username": "User11",
     "password": "$2b$10$R9KoFoEVryhGIWz1lnbH5uLIempLPUS09hRxtjS.lcVOvr2DkpIEG"
+  },
+  {
+    "username": "user",
+    "password": "$2b$10$lUkFBwIK3versQlnidW3Ue38XafdG8S3/Xf.GkC365X89jhd9pBNe"
+  },
+  {
+    "username": "user11",
+    "password": "$2b$10$l0drrS7b9WC7jv8r7ExyoOLNrWzuX5.fuZ5YJgL4dNq5dkwSSlOoK"
   }
 ]
