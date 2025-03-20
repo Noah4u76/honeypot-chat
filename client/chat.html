@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Room</title>
   <link rel="stylesheet" href="chat.css">
-  <script defer src="encryption.js"></script>
-  <script defer src="chat.js"></script>
+  <script src="encryption.js"></script>
+  <script src="chat.js" defer></script>
 </head>
 <body>
   <h2>Chat Room</h2>
@@ -16,7 +15,23 @@
       <div id="messages"></div>
     </div>
     <div id="input-area">
-      <input type="text" id="message" placeholder="Type a message..." autocomplete="off">
+      <div id="formatting-toolbar">
+        <button type="button" id="bold-btn"><b>B</b></button>
+        <button type="button" id="italic-btn"><i>I</i></button>
+        <button type="button" id="underline-btn"><u>U</u></button>
+      </div>
+      <div id="message-input" class="message-input" contenteditable="true"></div>
+      <button id="emoji-btn">😊</button>
+      <div id="emoji-panel" class="emoji-panel">
+        <span class="emoji">😀</span>
+        <span class="emoji">😄</span>
+        <span class="emoji">😁</span>
+        <span class="emoji">😅</span>
+        <span class="emoji">👌</span>
+        <span class="emoji">👍</span>
+        <span class="emoji">👎</span>
+        <span class="emoji">👏</span>
+      </div>
       <input type="file" id="fileInput">
       <select id="who-to-send" name="who-to-send">
         <option value="All">All</option>
