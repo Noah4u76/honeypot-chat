@@ -98,6 +98,17 @@ h2 {
   padding: 5px 10px;
   margin-right: 5px;
   cursor: pointer;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+#formatting-toolbar button:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* Contenteditable rich text input */
@@ -110,6 +121,7 @@ h2 {
   margin: 5px 0;
   min-height: 40px;
   overflow-y: auto;
+  text-align: left;
 }
 
 /* Emoji button */
@@ -121,30 +133,42 @@ h2 {
   cursor: pointer;
   font-size: 18px;
   margin-right: 5px;
+  transition: all 0.2s ease;
 }
 
-/* Emoji panel styling */
+#emoji-btn:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
 .emoji-panel {
-  display: none;  /* Hidden by default */
-  margin-top: 5px;
+  display: none;
+  position: absolute;
   border: 1px solid #ccc;
   border-radius: 4px;
-  padding: 5px;
+  padding: 8px;
   background: #fff;
-  max-width: 300px;
   text-align: center;
+  z-index: 100;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
 }
 
 .emoji-panel .emoji {
   cursor: pointer;
   font-size: 20px;
-  margin: 2px;
-  padding: 4px;
-  transition: background-color 0.2s ease;
+  margin: 0 3px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  transition: all 0.2s ease;
 }
 
 .emoji-panel .emoji:hover {
-  background-color: #eee;
+  background-color: #f0f0f0;
+  transform: scale(1.2);
 }
 
 /* File input, recipient select, send & logout buttons */
@@ -166,7 +190,7 @@ button {
   cursor: pointer;
   font-size: 15px;
   margin: 5px 0;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 #send-btn {
@@ -176,6 +200,8 @@ button {
 
 #send-btn:hover {
   background: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 #logout-btn {
@@ -186,4 +212,6 @@ button {
 
 #logout-btn:hover {
   background: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }

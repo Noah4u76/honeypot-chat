@@ -232,20 +232,63 @@ function displaySystemMessage(message) {
   }
 }
 
-function insertAtCaret(el, text) {
-  let sel, range;
+// Store the last known caret position
+let lastCaretPosition = null;
+
+// Track the last caret position when user clicks or types in the message input
+function saveCaretPosition(element) {
   if (window.getSelection) {
-    sel = window.getSelection();
-    if (sel.rangeCount) {
-      range = sel.getRangeAt(0);
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      lastCaretPosition = selection.getRangeAt(0).cloneRange();
+    }
+  }
+}
+
+function insertAtCaret(el, text) {
+  if (!el) return;
+  
+  // Focus the element to ensure we can place the caret
+  el.focus();
+  
+  // If we have a saved caret position, use it
+  if (lastCaretPosition && window.getSelection) {
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(lastCaretPosition);
+  }
+  
+  // Now insert at the current position
+  if (document.selection) {
+    var sel = document.selection.createRange();
+    sel.text = text;
+  } else if (window.getSelection) {
+    var sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+      var range = sel.getRangeAt(0);
+      
+      // Delete the current selection first (if any)
       range.deleteContents();
-      const textNode = document.createTextNode(text);
+      
+      // Create a text node with our emoji
+      var textNode = document.createTextNode(text);
       range.insertNode(textNode);
+      
+      // Move the caret to after the inserted text
       range.setStartAfter(textNode);
       range.setEndAfter(textNode);
       sel.removeAllRanges();
       sel.addRange(range);
+      
+      // Save this new position
+      lastCaretPosition = range.cloneRange();
+    } else {
+      // No selection - append to the end
+      el.appendChild(document.createTextNode(text));
     }
+  } else {
+    // Fallback - just append to the end
+    el.innerHTML += text;
   }
 }
 
@@ -253,44 +296,46 @@ function insertAtCaret(el, text) {
 document.addEventListener("DOMContentLoaded", () => {
   // Toggle hardcoded emoji panel on emoji button click.
   const emojiBtn = document.getElementById("emoji-btn");
-const emojiPanel = document.getElementById("emoji-panel");
-emojiBtn.addEventListener("click", () => {
-  // Toggle display
-  emojiPanel.style.display = 
-    (emojiPanel.style.display === "none" || !emojiPanel.style.display)
-      ? "block"
-      : "none";
-});
-
-// For each emoji in the panel, insert the emoji character into #message-input
-document.querySelectorAll("#emoji-panel .emoji").forEach(emoji => {
-  emoji.addEventListener("click", () => {
-    const messageInput = document.getElementById("message-input");
-    insertAtCaret(messageInput, emoji.innerText);  // Insert text only
-    messageInput.focus();
-    // Optionally hide panel after picking an emoji:
-    emojiPanel.style.display = "none";
+  const emojiPanel = document.getElementById("emoji-panel");
+  const messageInput = document.getElementById("message-input");
+  
+  // Add event listeners to track caret position
+  messageInput.addEventListener('click', function() {
+    saveCaretPosition(this);
   });
-});
+  
+  messageInput.addEventListener('keyup', function() {
+    saveCaretPosition(this);
+  });
+  
+  emojiBtn.addEventListener("click", () => {
+    // Position the emoji panel to the right of the emoji button
+    const btnRect = emojiBtn.getBoundingClientRect();
+    emojiPanel.style.top = (btnRect.top + window.scrollY) + 'px';
+    emojiPanel.style.left = (btnRect.right + window.scrollX + 5) + 'px'; // 5px gap between button and panel
+    
+    // Toggle display
+    if (emojiPanel.style.display === "none" || !emojiPanel.style.display) {
+      emojiPanel.style.display = "block";
+    } else {
+      emojiPanel.style.display = "none";
+    }
+  });
 
-// Insert text at caret helper
-function insertAtCaret(el, text) {
-  let sel = window.getSelection();
-  if (!sel || !sel.rangeCount) {
-    // Fallback: just append if no selection
-    el.appendChild(document.createTextNode(text));
-    return;
-  }
-  let range = sel.getRangeAt(0);
-  range.deleteContents();
-  const textNode = document.createTextNode(text);
-  range.insertNode(textNode);
-  // Move caret after inserted text
-  range.setStartAfter(textNode);
-  range.setEndAfter(textNode);
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
+  // For each emoji in the panel, insert the emoji character into #message-input
+  document.querySelectorAll("#emoji-panel .emoji").forEach(emoji => {
+    // Remove any existing event listeners (to prevent duplicates)
+    const newEmoji = emoji.cloneNode(true);
+    emoji.parentNode.replaceChild(newEmoji, emoji);
+    
+    newEmoji.addEventListener("click", () => {
+      const messageInput = document.getElementById("message-input");
+      insertAtCaret(messageInput, newEmoji.innerText);
+      
+      // Hide panel after picking an emoji
+      emojiPanel.style.display = "none";
+    });
+  });
 
   // Formatting buttons for Bold, Italic, Underline.
   document.getElementById("bold-btn").addEventListener("click", () => {
