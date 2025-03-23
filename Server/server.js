@@ -7,6 +7,9 @@ import { fileURLToPath } from 'url';
 
 import { handleLogin } from './auth.js';
 import { handleMessage, handleJoin, handleDisconnect, handleFile } from './chat.js';
+import { initLogging, logSystemEvent } from './logger.js';
+import { initKeyStorage, generateKeyPair } from './advanced-encryption.js';
+import { resetExceedCountPeriodically } from './ratelimiting.js';
 
 // Paths & Directories Setup
 const __filename = fileURLToPath(import.meta.url);
@@ -23,10 +26,34 @@ const serverOptions = {
 const app = express();
 const STATIC_DIR = path.join(__dirname, '../client');
 app.use(express.static(STATIC_DIR));
+app.use(express.json());
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'login.html'));
 });
+
+// Add endpoint for key generation
+app.post('/generate-keys', async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+    
+    const keys = await generateKeyPair(username);
+    res.json(keys);
+  } catch (error) {
+    console.error('Error generating keys:', error);
+    res.status(500).json({ error: 'Failed to generate keys' });
+  }
+});
+
+// Initialize key storage and logging system
+async function init() {
+  await initKeyStorage();
+  await initLogging();
+  await logSystemEvent('Server started');
+}
 
 // Create HTTPS Server
 const httpsServer = https.createServer(serverOptions, app);
@@ -34,9 +61,12 @@ const wss = new WebSocketServer({ server: httpsServer });
 
 console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection DONT COMMIT IP
 
-wss.on('connection', (client) => {
+wss.on('connection', (client, req) => {
   console.log("New client connected.");
-
+  // Get the client's IP address
+  const clientIP = req.socket.remoteAddress;
+  client.ip = clientIP;
+  
   client.authenticated = false;
 
   client.on('message', async (data) => {
@@ -48,10 +78,10 @@ wss.on('connection', (client) => {
 
       switch (parsedData.type) {
         case "login":
-          // Handle login on this connection.
-          const success = await handleLogin(client, parsedData.username, parsedData.password);
+          // Handle login on this connection with password validation.
+          const success = await handleLogin(client, parsedData.username, parsedData.password, clientIP);
           client.authenticated = success;
-          client.send(JSON.stringify({ type: "login", status: success ? "success" : "fail" }));
+          // Response is sent by handleLogin function
           break;
 
         case "join":
@@ -77,8 +107,14 @@ wss.on('connection', (client) => {
           handleFile(client, parsedData.username, parsedData.filename, parsedData.filetype, parsedData.data, parsedData.reciever, wss);
           break;
           
-
-
+        case "publicKey":
+          // Handle a client sending their public key
+          if (!client.authenticated) {
+            client.send(JSON.stringify({ type: "error", error: "You must be logged in to exchange keys." }));
+            return;
+          }
+          handlePublicKey(client, parsedData.username, parsedData.publicKey);
+          break;
       }
     } catch (error) {
       console.error("Error processing message:", error);
@@ -91,4 +127,33 @@ wss.on('connection', (client) => {
   });
 });
 
-httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
+// Handle client public key submission
+function handlePublicKey(client, username, publicKey) {
+  try {
+    setUserPublicKey(username, publicKey);
+    client.send(JSON.stringify({ type: "keyExchange", status: "success" }));
+    logSystemEvent(`Public key received from user ${username}`);
+  } catch (error) {
+    console.error("Error storing public key:", error);
+    client.send(JSON.stringify({ 
+      type: "error", 
+      error: "Failed to store public key."
+    }));
+  }
+}
+
+// Initialize server
+init().then(() => {
+  httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
+}).catch(error => {
+  console.error('Failed to initialize server:', error);
+});
+
+setInterval(() => {
+  wss.clients.forEach(client => {
+    if (client.authenticated && client.rateLimitData) {
+      resetExceedCountPeriodically(client);
+    }
+  });
+}, 60000); // Check every minute
+
