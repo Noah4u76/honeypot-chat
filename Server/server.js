@@ -5,7 +5,7 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 
-import { handleLogin } from './auth.js';
+import { handleLogin, handleRegistration } from './auth.js';
 import { handleMessage, handleJoin, handleDisconnect, handleFile } from './chat.js';
 import { initLogging, logSystemEvent } from './logger.js';
 import { initKeyStorage, generateKeyPair } from './advanced-encryption.js';
@@ -59,7 +59,7 @@ async function init() {
 const httpsServer = https.createServer(serverOptions, app);
 const wss = new WebSocketServer({ server: httpsServer });
 
-console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection DONT COMMIT IP
+console.log(`[${new Date().toISOString()}] Server running on https://localhost:8001`); //Change to IP, for debugging connection DONT COMMIT IP
 
 wss.on('connection', (client, req) => {
   console.log("New client connected.");
@@ -83,6 +83,15 @@ wss.on('connection', (client, req) => {
           client.authenticated = success;
           // Response is sent by handleLogin function
           break;
+
+        case "registration":
+            // Handle login on this connection with password validation.
+            const registration_success = await handleRegistration(client, parsedData.username, parsedData.password, clientIP);
+            client.authenticated = registration_success;
+            // Response is sent by handleRegistration function
+            break;
+
+
 
         case "join":
           // For chat connections, mark them as authenticated
@@ -144,7 +153,7 @@ function handlePublicKey(client, username, publicKey) {
 
 // Initialize server
 init().then(() => {
-  httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
+  httpsServer.listen(8001, () => console.log(`HTTPS running on https://localhost:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
 }).catch(error => {
   console.error('Failed to initialize server:', error);
 });

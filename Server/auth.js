@@ -47,7 +47,7 @@ export async function handleLogin(client, username, password, clientIP) {
     users = data.trim() ? JSON.parse(data) : [];
     console.log("Loaded users:", users);
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    /*if (error.code === 'ENOENT') {
       console.log("users.json not found, creating a new one at", usersFile);
       try {
         await fs.writeFile(usersFile, JSON.stringify([], null, 2));
@@ -61,7 +61,10 @@ export async function handleLogin(client, username, password, clientIP) {
       console.error("Error reading users.json:", error);
       client.send(JSON.stringify({ type: "error", error: "Server error." }));
       return false;
-    }
+    }*/
+      console.error("Error reading users.json:", error);
+      client.send(JSON.stringify({ type: "error", error: "Server error." }));
+      return false;
   }
 
   let user = users.find(u => u.username === username);
@@ -77,7 +80,7 @@ export async function handleLogin(client, username, password, clientIP) {
       return false;
     }
 
-    const hash = await bcrypt.hash(password, 10);
+    /*const hash = await bcrypt.hash(password, 10);
     users.push({ username, password: hash });
     try {
       await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
@@ -88,7 +91,7 @@ export async function handleLogin(client, username, password, clientIP) {
       return false;
     }
     client.send(JSON.stringify({ type: "login", status: "success" }));
-    return true;
+    return true;*/
   } else {
     // Existing user login
     const isValid = await bcrypt.compare(password, user.password);
