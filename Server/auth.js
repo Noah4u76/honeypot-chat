@@ -1,9 +1,59 @@
 import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
 import path from 'path';
-
+import mysql from 'mysql2'
 // Use the current working directory as the base path for users.json
+
 const usersFile = path.join(process.cwd(), "users.json");
+
+var con = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "USERS"
+});
+
+
+
+con.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");
+  var sql = `CREATE TABLE IF NOT EXISTS USER (USER_ID INT NOT NULL AUTO_INCREMENT, 
+  USERNAME VARCHAR(255),PASSWORD VARCHAR(255),PRIMARY KEY(USER_ID))`;
+  con.query(sql, function (err, result) {
+    if (err) throw err;
+    console.log("Table created");
+  });
+});
+
+
+con.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");
+  con.query("SELECT * FROM USER", function (err, result) {
+    if (err) throw err;
+    console.log("Result: " + result);
+  });
+});
+
+
+async function getUserFromDatabase(username) {
+  return new Promise((resolve, reject) => {
+    con.query('SELECT * FROM USER WHERE USERNAME = ?', [username], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
+
+
+
+
+
+
 
 // Password validation function
 function validatePassword(password) {
@@ -67,8 +117,30 @@ export async function handleLogin(client, username, password, clientIP) {
       return false;
   }
 
-  let user = users.find(u => u.username === username);
-  if (!user) {
+  let user = null;
+
+  try {
+    // Wait for the result of the MySQL query
+    const results = await getUserFromDatabase(username);
+    if (results.length === 0) 
+    {
+      console.log('User does not exist.');
+    } 
+    else 
+    {
+      console.log('User:', user);
+
+      user = results[0];
+      console.log('User:', user);
+    }
+  } catch (err) 
+  {
+    console.error('Error executing query:', err);
+    client.send(JSON.stringify({ type: "error", error: "Server error." }));
+    return false;
+  }
+  console.log("User is, ", user)
+  if (user === null) {
     // For new user registration, validate password
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
@@ -92,9 +164,11 @@ export async function handleLogin(client, username, password, clientIP) {
     }
     client.send(JSON.stringify({ type: "login", status: "success" }));
     return true;*/
-  } else {
+  } 
+  else 
+  {
     // Existing user login
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.PASSWORD);
     client.send(JSON.stringify({ type: "login", status: isValid ? "success" : "fail" }));
     return isValid;
   }
@@ -168,12 +242,29 @@ export async function handleRegistration(client, username, password) {
   
   try {
     await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
+
+    con.connect(function(err) {
+      const values = [username, hash]
+      if (err) throw err;
+      console.log("Connected!");
+      var sql = "INSERT INTO USER (USERNAME, PASSWORD) VALUES (?, ?)";
+      con.query(sql, values, function (err, result) {
+        if (err) throw err;
+        console.log("Number of records inserted: " + result.affectedRows);
+      });
+    });
+
+
     console.log(`Created new user account for ${username}`);
     
     client.send(JSON.stringify({ 
       type: "registration", 
       status: "success" 
     }));
+
+
+
+
   } catch (err) {
     console.error("Error writing to users.json:", err);
     client.send(JSON.stringify({ 
