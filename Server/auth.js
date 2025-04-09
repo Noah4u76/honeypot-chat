@@ -7,7 +7,7 @@ import mysql from 'mysql2'
 const usersFile = path.join(process.cwd(), "users.json");
 
 var con = mysql.createConnection({
-  host: "localhost",
+  host: "0.0.0.0",
   user: "root",
   password: "",
   database: "USERS"
