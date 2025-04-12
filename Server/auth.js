@@ -2,52 +2,36 @@ import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import mysql from 'mysql2'
+import mongoose from 'mongoose'
+
 // Use the current working directory as the base path for users.json
 
 const usersFile = path.join(process.cwd(), "users.json");
 
-var con = mysql.createConnection({
-  host: "0.0.0.0",
-  user: "root",
-  password: "",
-  database: "USERS"
-});
 
 
 
-con.connect(function(err) {
-  if (err) throw err;
-  console.log("Connected!");
-  var sql = `CREATE TABLE IF NOT EXISTS USER (USER_ID INT NOT NULL AUTO_INCREMENT, 
-  USERNAME VARCHAR(255),PASSWORD VARCHAR(255),PRIMARY KEY(USER_ID))`;
-  con.query(sql, function (err, result) {
-    if (err) throw err;
-    console.log("Table created");
-  });
-});
+const uri = 'mongodb://localhost:27017/USERS';
 
 
-con.connect(function(err) {
-  if (err) throw err;
-  console.log("Connected!");
-  con.query("SELECT * FROM USER", function (err, result) {
-    if (err) throw err;
-    console.log("Result: " + result);
-  });
-});
-
-
-async function getUserFromDatabase(username) {
-  return new Promise((resolve, reject) => {
-    con.query('SELECT * FROM USER WHERE USERNAME = ?', [username], (err, results) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(results);
-      }
-    });
-  });
+try {
+  await mongoose.connect(uri);
+  console.log("✅ MongoDB Connected");
+} catch (err) {
+  console.error("❌ MongoDB Connection Error:", err);
 }
+
+const userSchema = new mongoose.Schema({
+  username: { type: String, unique: true, required: true },
+  password: { type: String, required: true }
+});
+
+const User = mongoose.model('User', userSchema);
+
+
+
+
+
 
 
 
@@ -121,16 +105,13 @@ export async function handleLogin(client, username, password, clientIP) {
 
   try {
     // Wait for the result of the MySQL query
-    const results = await getUserFromDatabase(username);
-    if (results.length === 0) 
+    user = await User.findOne({ username }); // ✅ assigning to outer variable
+    if (!user) 
     {
       console.log('User does not exist.');
     } 
     else 
     {
-      console.log('User:', user);
-
-      user = results[0];
       console.log('User:', user);
     }
   } catch (err) 
@@ -168,7 +149,7 @@ export async function handleLogin(client, username, password, clientIP) {
   else 
   {
     // Existing user login
-    const isValid = await bcrypt.compare(password, user.PASSWORD);
+    const isValid = await bcrypt.compare(password, user.password);
     client.send(JSON.stringify({ type: "login", status: isValid ? "success" : "fail" }));
     return isValid;
   }
@@ -226,7 +207,7 @@ export async function handleRegistration(client, username, password) {
   }
 
   // Check if username already exists
-  let user = users.find(u => u.username === username);
+  let user = await User.findOne({ username });
   if (user) {
     client.send(JSON.stringify({ 
       type: "registration", 
@@ -243,16 +224,9 @@ export async function handleRegistration(client, username, password) {
   try {
     await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
 
-    con.connect(function(err) {
-      const values = [username, hash]
-      if (err) throw err;
-      console.log("Connected!");
-      var sql = "INSERT INTO USER (USERNAME, PASSWORD) VALUES (?, ?)";
-      con.query(sql, values, function (err, result) {
-        if (err) throw err;
-        console.log("Number of records inserted: " + result.affectedRows);
-      });
-    });
+    const newUser = new User({ username, password: hash });
+    await newUser.save();
+
 
 
     console.log(`Created new user account for ${username}`);

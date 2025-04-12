@@ -1,0 +1,5 @@
+[2025-04-12T14:53:41.613Z] SYSTEM: Server started
+[2025-04-12T14:53:51.681Z] SYSTEM: user1 joined the chat.
+[2025-04-12T14:53:58.229Z] SYSTEM: user1 disconnected.
+[2025-04-12T14:54:04.426Z] SYSTEM: user1 joined the chat.
+[2025-04-12T14:54:05.867Z] SYSTEM: user1 disconnected.
