@@ -6,19 +6,19 @@ import mongoose from 'mongoose'
 
 // Use the current working directory as the base path for users.json
 
-const usersFile = path.join(process.cwd(), "users.json");
+//const usersFile = path.join(process.cwd(), "users.json");
 
 
 
 
-const uri = 'mongodb://localhost:27017/USERS';
+const uri = 'mongodb://0.0.0.0:27017/USERS';
 
 
 try {
   await mongoose.connect(uri);
-  console.log("✅ MongoDB Connected");
+  console.log("MongoDB Connected");
 } catch (err) {
-  console.error("❌ MongoDB Connection Error:", err);
+  console.error("MongoDB Connection Error:", err);
 }
 
 const userSchema = new mongoose.Schema({
@@ -77,9 +77,9 @@ export async function handleLogin(client, username, password, clientIP) {
 
   let users = [];
   try {
-    const data = await fs.readFile(usersFile, 'utf8');
+    /*const data = await fs.readFile(usersFile, 'utf8');
     users = data.trim() ? JSON.parse(data) : [];
-    console.log("Loaded users:", users);
+    console.log("Loaded users:", users);*/
   } catch (error) {
     /*if (error.code === 'ENOENT') {
       console.log("users.json not found, creating a new one at", usersFile);
@@ -179,13 +179,13 @@ export async function handleRegistration(client, username, password) {
 
   let users = [];
   try {
-    const data = await fs.readFile(usersFile, 'utf8');
-    users = data.trim() ? JSON.parse(data) : [];
+    /*const data = await fs.readFile(usersFile, 'utf8');
+    users = data.trim() ? JSON.parse(data) : [];*/
   } catch (error) {
     if (error.code === 'ENOENT') {
       try {
-        await fs.writeFile(usersFile, JSON.stringify([], null, 2));
-        users = [];
+        /*await fs.writeFile(usersFile, JSON.stringify([], null, 2));
+        users = [];*/
       } catch (err) {
         console.error("Error creating users.json:", err);
         client.send(JSON.stringify({ 

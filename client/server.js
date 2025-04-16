@@ -19,5 +19,5 @@ app.use(express.static('.'));
 const httpsServer = https.createServer(serverOptions, app);
 
 httpsServer.listen(PORT, () => {
-    console.log(`HTTPS Web Client running at https://localhost:${PORT}`); //CHANGE TO IP (DONT COMMIT) localhost:8001
+    console.log(`HTTPS Web Client running at https://0.0.0.0:${PORT}`); //CHANGE TO IP (DONT COMMIT) 0.0.0.0:8001
 });

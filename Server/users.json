@@ -2,5 +2,13 @@
   {
     "username": "user1",
     "password": "$2b$10$a0PX.sRUhJvTkbhBmnHexOORL9HI9e/BGJoANCLS53i.lcWfMJOZC"
+  },
+  {
+    "username": "user2",
+    "password": "$2b$10$.8J62NqAUAUpShxCMAAs.e5fQHpaXHatCBgx0Q94eL4JY5MIiAlZe"
+  },
+  {
+    "username": "user3",
+    "password": "$2b$10$MbE0P0lwFPnjf8SzB7JQWe7sYdMEKGCiUSA5r6K9k2m8ncUJRelYW"
   }
 ]
