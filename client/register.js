@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const SERVER_ADDRESS = "wss://0.0.0.0:8001"; // Adjust as needed
+    const SERVER_ADDRESS = "wss://192.168.1.96:8001"; // Adjust as needed
     const socket = new WebSocket(SERVER_ADDRESS);
   
     // Password validation function
