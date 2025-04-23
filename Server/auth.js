@@ -62,7 +62,6 @@ async function getUserFromDatabase(username) {
 }
 
 
-console.log(getUserFromDatabase("user1"))
 
 
 
@@ -243,8 +242,8 @@ export async function handleRegistration(client, username, password) {
   }
 
   // Check if username already exists
-  const user = await pool.query(`SELECT * FROM USER WHERE USERNAME = ?`, [username]); // ✅ assigning to outer variable
-  if (user) {
+  const results = await  getUserFromDatabase(username);
+  if (results.length !== 0) {
     client.send(JSON.stringify({ 
       type: "registration", 
       status: "fail", 

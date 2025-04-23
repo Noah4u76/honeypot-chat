@@ -1,6 +1,33 @@
 import { applyRateLimit } from './ratelimiting.js';
 import { encrypt } from './encryption.js';
 import { logMessage, logSystemEvent } from './logger.js';
+import mysql from 'mysql2'
+
+
+
+
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'USERS',
+}).promise()
+
+
+
+const MESSAGE_TABLE = await pool.query(`CREATE TABLE IF NOT EXISTS MESSAGE (
+  MESSAGE_ID INT NOT NULL AUTO_INCREMENT,
+  SENDER_ID INT NOT NULL,
+  RECEIVER_ID INT, -- NULL for global messages
+  CONTENT TEXT NOT NULL, -- Encrypted message content
+  IS_FILE BOOLEAN DEFAULT FALSE,
+  TIMESTAMP TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(MESSAGE_ID),
+  FOREIGN KEY (SENDER_ID) REFERENCES USER(USER_ID),
+  FOREIGN KEY (RECEIVER_ID) REFERENCES USER(USER_ID)
+)`)
+
+
 
 let userList = [];
 
