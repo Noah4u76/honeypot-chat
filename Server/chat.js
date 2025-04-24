@@ -7,11 +7,24 @@ import mysql from 'mysql2'
 
 
 const pool = mysql.createPool({
-  host: '0.0.0.0',
+  host: 'localhost',
   user: 'root',
   password: '',
   database: 'USERS',
 }).promise()
+
+
+
+
+async function getUserIDFromDatabase(username) {
+  const [rows] = await pool.query(`SELECT USER_ID FROM USER WHERE USERNAME = ?`, [username]);
+  return rows;
+}
+
+
+const result = await getUserIDFromDatabase("user1")
+console.log("user id ", result)
+
 
 
 
@@ -92,6 +105,28 @@ export async function handleMessage(client, username, message, reciever, wss) {
     reciever, 
     message: encryptedMessage 
   });
+
+
+  const reciever_id = await getUserIDFromDatabase(reciever);
+  const sender_id = await getUserIDFromDatabase(username);
+
+  console.log("reciver " ,reciever)
+  console.log("sender " ,sender_id[0])
+  console.log("sender id " ,sender_id[0].USER_ID)
+
+  console.log("reciever_id length" ,reciever_id.length)
+
+  if(reciever_id.length === 0 && reciever === "All")
+  {
+    console.log("printing to suers")
+    const message = await pool.query(`INSERT INTO MESSAGE (SENDER_ID, RECEIVER_ID, CONTENT, IS_FILE) VALUES (?, ?, ?, ?)`, [sender_id[0].USER_ID,null,encryptedMessage,false]); // ✅ assigning to outer variable
+  }
+  else
+  {
+    const message = await pool.query(`INSERT INTO MESSAGE (SENDER_ID, RECEIVER_ID, CONTENT, IS_FILE) VALUES (?, ?, ?, ?)`, [sender_id[0].USER_ID,reciever_id[0].USER_ID,encryptedMessage,false]); // ✅ assigning to outer variable
+  }
+  
+
 
   if (reciever === "All") {
     // Broadcast to everyone

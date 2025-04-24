@@ -59,7 +59,7 @@ async function init() {
 const httpsServer = https.createServer(serverOptions, app);
 const wss = new WebSocketServer({ server: httpsServer });
 
-console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection DONT COMMIT IP
+console.log(`[${new Date().toISOString()}] Server running on https://localhost:8001`); //Change to IP, for debugging connection DONT COMMIT IP
 
 wss.on('connection', (client, req) => {
   console.log("New client connected.");
@@ -153,7 +153,7 @@ function handlePublicKey(client, username, publicKey) {
 
 // Initialize server
 init().then(() => {
-  httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
+  httpsServer.listen(8001, () => console.log(`HTTPS running on https://localhost:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
 }).catch(error => {
   console.error('Failed to initialize server:', error);
 });

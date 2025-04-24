@@ -11,7 +11,7 @@ import mysql from 'mysql2'
 
 
 const pool = mysql.createPool({
-  host: '0.0.0.0',
+  host: 'localhost',
   user: 'root',
   password: '',
   database: 'USERS',
@@ -240,6 +240,19 @@ export async function handleRegistration(client, username, password) {
       return;
     }
   }
+
+
+  if (username.trim() === 'all') {
+    client.send(JSON.stringify({ 
+      type: "registration", 
+      status: "fail", 
+      message: "You can't make your username all." 
+    }));
+    return;
+  }
+
+
+
 
   // Check if username already exists
   const results = await  getUserFromDatabase(username);
