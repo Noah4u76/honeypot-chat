@@ -11,7 +11,7 @@ import mysql from 'mysql2'
 
 
 const pool = mysql.createPool({
-  host: '0.0.0.0',
+  host: 'localhost',
   user: 'root',
   password: '',
   database: 'USERS',
@@ -241,8 +241,7 @@ export async function handleRegistration(client, username, password) {
     }
   }
 
-
-  if (username.trim() === 'all') {
+  if (username.trim().toLowerCase() === 'all' || username) {
     client.send(JSON.stringify({ 
       type: "registration", 
       status: "fail", 
@@ -276,7 +275,7 @@ export async function handleRegistration(client, username, password) {
     ///await newUser.save();
 
 
-    const user = await pool.query(`INSERT INTO USER (USERNAME, PASSWORD) VALUES (?, ?)`, [username,password]); // ✅ assigning to outer variable
+    const user = await pool.query(`INSERT INTO USER (USERNAME, PASSWORD) VALUES (?, ?)`, [username,hash]); // ✅ assigning to outer variable
 
 
 
