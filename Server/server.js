@@ -15,6 +15,9 @@ import { resetExceedCountPeriodically } from './ratelimiting.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+console.log("__filename ", __filename)
+console.log("__dirname ", __dirname)
+
 // SSL/TLS Certificates
 const CERT_PATH = path.join(__dirname, '../certs');
 const serverOptions = {
@@ -28,6 +31,8 @@ const STATIC_DIR = path.join(__dirname, '../client');
 app.use(express.static(STATIC_DIR));
 app.use(express.json());
 
+
+console.log("STATIC_DIR ", STATIC_DIR)
 app.get('/', (req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'login.html'));
 });
@@ -59,7 +64,7 @@ async function init() {
 const httpsServer = https.createServer(serverOptions, app);
 const wss = new WebSocketServer({ server: httpsServer });
 
-console.log(`[${new Date().toISOString()}] Server running on https://localhost:8001`); //Change to IP, for debugging connection DONT COMMIT IP
+console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection DONT COMMIT IP
 
 wss.on('connection', (client, req) => {
   console.log("New client connected.");
@@ -153,7 +158,7 @@ function handlePublicKey(client, username, publicKey) {
 
 // Initialize server
 init().then(() => {
-  httpsServer.listen(8001, () => console.log(`HTTPS running on https://localhost:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
+  httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
 }).catch(error => {
   console.error('Failed to initialize server:', error);
 });

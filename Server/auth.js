@@ -2,64 +2,34 @@ import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import mysql from 'mysql2'
+import mongoose from 'mongoose'
 
 // Use the current working directory as the base path for users.json
 
-//const usersFile = path.join(process.cwd(), "users.json");
+const usersFile = path.join(process.cwd(), "users.json");
 
 
 
 
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'USERS',
-}).promise()
+const uri = 'mongodb://0.0.0.0:27017/USERS';
 
 
-const USER_TABLE = await pool.query(`CREATE TABLE IF NOT EXISTS USER (
-    USER_ID INT NOT NULL AUTO_INCREMENT,
-    USERNAME VARCHAR(255) NOT NULL UNIQUE,
-    PASSWORD VARCHAR(255) NOT NULL,
-    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY(USER_ID)
-)`)
-
-
-
-
-
-const MESSAGE_TABLE = await pool.query(`CREATE TABLE IF NOT EXISTS MESSAGE (
-    MESSAGE_ID INT NOT NULL AUTO_INCREMENT,
-    SENDER_ID INT NOT NULL,
-    RECEIVER_ID INT, -- NULL for global messages
-    CONTENT TEXT NOT NULL, -- Encrypted message content
-    IS_FILE BOOLEAN DEFAULT FALSE,
-    TIMESTAMP TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY(MESSAGE_ID),
-    FOREIGN KEY (SENDER_ID) REFERENCES USER(USER_ID),
-    FOREIGN KEY (RECEIVER_ID) REFERENCES USER(USER_ID)
-)`)
-
-
-
-const FILE_META_TABLE = await pool.query(`CREATE TABLE IF NOT EXISTS FILE_META (
-    FILE_ID INT NOT NULL AUTO_INCREMENT,
-    MESSAGE_ID INT NOT NULL,
-    FILENAME VARCHAR(255) NOT NULL,
-    FILETYPE VARCHAR(100) NOT NULL,
-    CLOUD_REFERENCE VARCHAR(255) NOT NULL, -- Reference to cloud storage
-    PRIMARY KEY(FILE_ID),
-    FOREIGN KEY (MESSAGE_ID) REFERENCES MESSAGE(MESSAGE_ID)
-)`)
-
-
-
-async function getUserFromDatabase(username) {
-  const [rows] = await pool.query(`SELECT * FROM USER WHERE USERNAME = ?`, [username]);
-  return rows;
+try {
+  await mongoose.connect(uri);
+  console.log("✅ MongoDB Connected");
+} catch (err) {
+  console.error("❌ MongoDB Connection Error:", err);
 }
+
+const userSchema = new mongoose.Schema({
+  username: { type: String, unique: true, required: true },
+  password: { type: String, required: true }
+});
+
+const User = mongoose.model('User', userSchema);
+
+
+
 
 
 
@@ -107,9 +77,9 @@ export async function handleLogin(client, username, password, clientIP) {
 
   let users = [];
   try {
-    /*const data = await fs.readFile(usersFile, 'utf8');
+    const data = await fs.readFile(usersFile, 'utf8');
     users = data.trim() ? JSON.parse(data) : [];
-    console.log("Loaded users:", users);*/
+    console.log("Loaded users:", users);
   } catch (error) {
     /*if (error.code === 'ENOENT') {
       console.log("users.json not found, creating a new one at", usersFile);
@@ -132,20 +102,16 @@ export async function handleLogin(client, username, password, clientIP) {
   }
 
   let user = null;
-  console.log("cyrr ",user)
 
   try {
     // Wait for the result of the MySQL query
-    const results = await  getUserFromDatabase(username);
-    console.log("results fds ", results)
-    if (results.length === 0) 
+    user = await User.findOne({ username }); // ✅ assigning to outer variable
+    if (!user) 
     {
-        console.log('User does not exist.');
+      console.log('User does not exist.');
     } 
     else 
     {
-      console.log('User:', user);
-      user = results[0];
       console.log('User:', user);
     }
   } catch (err) 
@@ -183,8 +149,7 @@ export async function handleLogin(client, username, password, clientIP) {
   else 
   {
     // Existing user login
-    
-    const isValid = await bcrypt.compare(password, user.PASSWORD);
+    const isValid = await bcrypt.compare(password, user.password);
     client.send(JSON.stringify({ type: "login", status: isValid ? "success" : "fail" }));
     return isValid;
   }
@@ -214,13 +179,13 @@ export async function handleRegistration(client, username, password) {
 
   let users = [];
   try {
-    /*const data = await fs.readFile(usersFile, 'utf8');
-    users = data.trim() ? JSON.parse(data) : [];*/
+    const data = await fs.readFile(usersFile, 'utf8');
+    users = data.trim() ? JSON.parse(data) : [];
   } catch (error) {
     if (error.code === 'ENOENT') {
       try {
-        /*await fs.writeFile(usersFile, JSON.stringify([], null, 2));
-        users = [];*/
+        await fs.writeFile(usersFile, JSON.stringify([], null, 2));
+        users = [];
       } catch (err) {
         console.error("Error creating users.json:", err);
         client.send(JSON.stringify({ 
@@ -241,21 +206,9 @@ export async function handleRegistration(client, username, password) {
     }
   }
 
-  if (username.trim().toLowerCase() === 'all' || username) {
-    client.send(JSON.stringify({ 
-      type: "registration", 
-      status: "fail", 
-      message: "You can't make your username all." 
-    }));
-    return;
-  }
-
-
-
-
   // Check if username already exists
-  const results = await  getUserFromDatabase(username);
-  if (results.length !== 0) {
+  let user = await User.findOne({ username });
+  if (user) {
     client.send(JSON.stringify({ 
       type: "registration", 
       status: "fail", 
@@ -269,14 +222,10 @@ export async function handleRegistration(client, username, password) {
   users.push({ username, password: hash });
   
   try {
-    ///await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
+    await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
 
-    ///const newUser = new User({ username, password: hash });
-    ///await newUser.save();
-
-
-    const user = await pool.query(`INSERT INTO USER (USERNAME, PASSWORD) VALUES (?, ?)`, [username,hash]); // ✅ assigning to outer variable
-
+    const newUser = new User({ username, password: hash });
+    await newUser.save();
 
 
 
