@@ -1,4 +1,3 @@
-import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import express from 'express';
@@ -10,20 +9,11 @@ import { handleMessage, handleJoin, handleDisconnect, handleFile } from './chat.
 import { initLogging, logSystemEvent } from './logger.js';
 import { initKeyStorage, generateKeyPair } from './advanced-encryption.js';
 import { resetExceedCountPeriodically } from './ratelimiting.js';
+import { startKeepAlive } from './keep_alive.js'; // <<< NEW
 
 // Paths & Directories Setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-console.log("__filename ", __filename)
-console.log("__dirname ", __dirname)
-
-// SSL/TLS Certificates
-const CERT_PATH = path.join(__dirname, '../certs');
-const serverOptions = {
-  key: fs.readFileSync(path.join(CERT_PATH, 'key.pem')),
-  cert: fs.readFileSync(path.join(CERT_PATH, 'cert.pem'))
-};
 
 // Express Server
 const app = express();
@@ -31,8 +21,11 @@ const STATIC_DIR = path.join(__dirname, '../client');
 app.use(express.static(STATIC_DIR));
 app.use(express.json());
 
+console.log("__filename ", __filename);
+console.log("__dirname ", __dirname);
+console.log("STATIC_DIR ", STATIC_DIR);
 
-console.log("STATIC_DIR ", STATIC_DIR)
+// Serve login page
 app.get('/', (req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'login.html'));
 });
@@ -60,46 +53,93 @@ async function init() {
   await logSystemEvent('Server started');
 }
 
-// Create HTTPS Server
-const httpsServer = https.createServer(serverOptions, app);
-const wss = new WebSocketServer({ server: httpsServer });
+// Initialize server
+const port = process.env.PORT || 8001;
+const server = app.listen(port, () => {
+  // Get the base URL from environment variables
+  let baseUrl = process.env.RAILWAY_STATIC_URL || process.env.SELF_URL || `localhost:${port}`;
+  
+  // Ensure URL has a protocol
+  const appUrl = baseUrl.startsWith('http') ? baseUrl : 
+                (baseUrl.includes('localhost') ? `http://${baseUrl}` : `https://${baseUrl}`);
+  
+  console.log(`[${new Date().toISOString()}] Server running on ${appUrl}`);
+});
 
-console.log(`[${new Date().toISOString()}] Server running on https://0.0.0.0:8001`); //Change to IP, for debugging connection DONT COMMIT IP
+// Create WebSocket server
+const wss = new WebSocketServer({ server });
 
+// Ping all clients every 30 seconds to keep connections alive
+const PING_INTERVAL = 30000; // 30 seconds
+setInterval(() => {
+  wss.clients.forEach(client => {
+    if (client.readyState === client.OPEN) {
+      // Set a timeout to terminate the connection if no pong is received
+      client.isAlive = false;
+      client.ping();
+      
+      // Log ping attempts in debug mode
+      console.log(`[${new Date().toISOString()}] Sent ping to client`);
+    }
+  });
+}, PING_INTERVAL);
+
+// Handle WebSocket connections
 wss.on('connection', (client, req) => {
   console.log("New client connected.");
+
+  // Set up ping-pong mechanism
+  client.isAlive = true;
+  client.on('pong', () => {
+    // Mark the connection as alive when pong is received
+    client.isAlive = true;
+    console.log(`[${new Date().toISOString()}] Received pong from client`);
+  });
+
+  // Set a timeout checker to close dead connections
+  const connectionChecker = setInterval(() => {
+    if (client.isAlive === false) {
+      console.log(`[${new Date().toISOString()}] Client connection dead. Terminating.`);
+      clearInterval(connectionChecker);
+      client.terminate();
+      handleDisconnect(client, wss);
+      return;
+    }
+    
+    // Mark as not alive until the next pong is received
+    client.isAlive = false;
+  }, PING_INTERVAL + 10000); // Check 10 seconds after ping to give time for pong
+
+  // Clear interval on close to prevent memory leaks
+  client.on('close', () => {
+    clearInterval(connectionChecker);
+    console.log("Client disconnected.");
+    handleDisconnect(client, wss);
+  });
+
   // Get the client's IP address
   const clientIP = req.socket.remoteAddress;
   client.ip = clientIP;
-  
   client.authenticated = false;
 
   client.on('message', async (data) => {
     try {
-      console.log(data);
+      console.log("Server received raw data:", data);
       const parsedData = JSON.parse(data);
       console.log("Received:", parsedData);
-      console.log("Server received raw data:", data);
 
       switch (parsedData.type) {
         case "login":
-          // Handle login on this connection with password validation.
           const success = await handleLogin(client, parsedData.username, parsedData.password, clientIP);
           client.authenticated = success;
-          // Response is sent by handleLogin function
           break;
 
         case "registration":
-            // Handle login on this connection with password validation.
-            const registration_success = await handleRegistration(client, parsedData.username, parsedData.password, clientIP);
-            client.authenticated = registration_success;
-            // Response is sent by handleRegistration function
-            break;
-
-
+          const registration_success = await handleRegistration(client, parsedData.username, parsedData.password, clientIP);
+          client.authenticated = registration_success;
+          break;
 
         case "join":
-          // For chat connections, mark them as authenticated
           client.authenticated = true;
           handleJoin(client, parsedData.username, wss);
           break;
@@ -109,35 +149,31 @@ wss.on('connection', (client, req) => {
             client.send(JSON.stringify({ type: "error", error: "You must be logged in to send messages." }));
             return;
           }
-          // Note: Pass the reciever field along to the handler.
           handleMessage(client, parsedData.username, parsedData.message, parsedData.reciever, wss);
           break;
 
         case "file":
           if (!client.authenticated) {
-            client.send(JSON.stringify({ type: "error", error: "You must be logged in to send messages." }));
+            client.send(JSON.stringify({ type: "error", error: "You must be logged in to send files." }));
             return;
           }
           handleFile(client, parsedData.username, parsedData.filename, parsedData.filetype, parsedData.data, parsedData.reciever, wss);
           break;
-          
+
         case "publicKey":
-          // Handle a client sending their public key
           if (!client.authenticated) {
             client.send(JSON.stringify({ type: "error", error: "You must be logged in to exchange keys." }));
             return;
           }
           handlePublicKey(client, parsedData.username, parsedData.publicKey);
           break;
+
+        default:
+          client.send(JSON.stringify({ type: "error", error: "Unknown message type." }));
       }
     } catch (error) {
       console.error("Error processing message:", error);
     }
-  });
-
-  client.on('close', () => {
-    console.log("Client disconnected.");
-    handleDisconnect(client, wss);
   });
 });
 
@@ -156,18 +192,20 @@ function handlePublicKey(client, username, publicKey) {
   }
 }
 
-// Initialize server
-init().then(() => {
-  httpsServer.listen(8001, () => console.log(`HTTPS running on https://0.0.0.0:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
-}).catch(error => {
-  console.error('Failed to initialize server:', error);
-});
-
+// Periodically reset rate limiting
 setInterval(() => {
   wss.clients.forEach(client => {
     if (client.authenticated && client.rateLimitData) {
       resetExceedCountPeriodically(client);
     }
   });
-}, 60000); // Check every minute
+}, 60000);
 
+// Start keep-alive pings
+init()
+  .then(() => {
+    startKeepAlive();
+  })
+  .catch(error => {
+    console.error('Failed to initialize server:', error);
+  });

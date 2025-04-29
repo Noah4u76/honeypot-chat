@@ -1,9 +1,112 @@
-const SERVER_ADDRESS = "wss://0.0.0.0:8001"; // Change IP before committing
-const socket = new WebSocket(SERVER_ADDRESS);
+const SERVER_ADDRESS = window.location.protocol === 'https:' 
+  ? `wss://${window.location.host}` 
+  : `ws://${window.location.host}`;
+
+// Websocket and reconnection setup
+let socket;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 3000; // 3 seconds
+
+function connectWebSocket() {
+  socket = new WebSocket(SERVER_ADDRESS);
+  
+  // Connection established
+  socket.onopen = () => {
+    console.log("Connection established with server");
+    reconnectAttempts = 0; // Reset reconnect counter on successful connection
+    
+    // Announce presence to server
+    const username = localStorage.getItem("username");
+    if (username) {
+      socket.send(JSON.stringify({ type: "join", username }));
+    }
+  };
+  
+  // Handle incoming messages
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === "message") {
+      // Decrypt and display a text message.
+      window.decrypt(data.message)
+        .then(decryptedMessage => {
+          // Figure out which conversation this belongs to.
+          let convKey = "All";
+          if (data.reciever && data.reciever !== "All") {
+            convKey = [data.username, data.reciever].sort().join("|");
+          }
+          // Prevent duplicate self-message echo.
+          if (data.username === username) {
+            const convHistory = conversations[convKey] || [];
+            const lastMsg = convHistory[convHistory.length - 1];
+            if (lastMsg && lastMsg.user === username && lastMsg.message === decryptedMessage) return;
+          }
+          displayMessage(data.username, decryptedMessage, data.username === username ? "sent" : "received", convKey);
+        })
+        .catch(err => console.error("Decryption failed:", err));
+    } else if (data.type === "notification") {
+      // User join/leave notifications
+      changeUserList(data.userList);
+      window.decrypt(data.message)
+        .then(decryptedMessage => {
+          displaySystemMessage(decryptedMessage);
+        })
+        .catch(err => console.error("Decryption failed:", err));
+    } else if (data.type === "error") {
+      console.error("Error from server:", data.error);
+    } else if (data.type === "file") {
+      // Decrypt and display a file message.
+      window.decrypt(data.data)
+        .then(decryptedData => {
+          let convKey = "All";
+          if (data.reciever && data.reciever !== "All") {
+            convKey = [data.username, data.reciever].sort().join("|");
+          }
+          // Show the file link with correct sender styling.
+          displayFileLink(data.filename, decryptedData, convKey, data.username);
+        })
+        .catch(err => console.error("Decryption failed:", err));
+    }
+  };
+  
+  // Handle connection closure
+  socket.onclose = (event) => {
+    console.log(`WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}`);
+    
+    // Attempt to reconnect if not a normal closure and within attempts limit
+    if (event.code !== 1000 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      reconnectAttempts++;
+      const delay = RECONNECT_DELAY * reconnectAttempts; // Exponential backoff
+      console.log(`Attempting to reconnect in ${delay/1000} seconds... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+      
+      displaySystemMessage(`Connection lost. Attempting to reconnect in ${delay/1000} seconds... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+      
+      setTimeout(connectWebSocket, delay);
+    } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      displaySystemMessage("Connection lost. Maximum reconnection attempts reached. Please refresh the page.");
+    }
+  };
+  
+  // Handle connection errors
+  socket.onerror = (error) => {
+    console.error("WebSocket error:", error);
+    displaySystemMessage("Connection error. Please check your network connection.");
+  };
+}
+
+// Initialize WebSocket connection
+connectWebSocket();
+
+// Authentication check
 let userList = [];
 const username = localStorage.getItem("username");
-if (!username) {
-  // If there's no username in localStorage, redirect to login.
+const isAuthenticated = localStorage.getItem("authenticated");
+
+// Redirect unauthenticated users to login
+if (!username || !isAuthenticated) {
+  console.log("User not authenticated, redirecting to login");
+  localStorage.removeItem("username"); // Clear any partial auth data
+  localStorage.removeItem("authenticated");
   window.location.href = "login.html";
 }
 
@@ -22,55 +125,6 @@ function updateConversationHeader() {
         : "Chatting with: " + activeConversation.split("|").find(u => u !== username);
   }
 }
-
-socket.onopen = () => {
-  socket.send(JSON.stringify({ type: "join", username }));
-};
-
-socket.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === "message") {
-    // Decrypt and display a text message.
-    window.decrypt(data.message)
-      .then(decryptedMessage => {
-        // Figure out which conversation this belongs to.
-        let convKey = "All";
-        if (data.reciever && data.reciever !== "All") {
-          convKey = [data.username, data.reciever].sort().join("|");
-        }
-        // Prevent duplicate self-message echo.
-        if (data.username === username) {
-          const convHistory = conversations[convKey] || [];
-          const lastMsg = convHistory[convHistory.length - 1];
-          if (lastMsg && lastMsg.user === username && lastMsg.message === decryptedMessage) return;
-        }
-        displayMessage(data.username, decryptedMessage, data.username === username ? "sent" : "received", convKey);
-      })
-      .catch(err => console.error("Decryption failed:", err));
-  } else if (data.type === "notification") {
-    // User join/leave notifications
-    changeUserList(data.userList);
-    window.decrypt(data.message)
-      .then(decryptedMessage => {
-        displaySystemMessage(decryptedMessage);
-      })
-      .catch(err => console.error("Decryption failed:", err));
-  } else if (data.type === "error") {
-    console.error("Error from server:", data.error);
-  } else if (data.type === "file") {
-    // Decrypt and display a file message.
-    window.decrypt(data.data)
-      .then(decryptedData => {
-        let convKey = "All";
-        if (data.reciever && data.reciever !== "All") {
-          convKey = [data.username, data.reciever].sort().join("|");
-        }
-        // Show the file link with correct sender styling.
-        displayFileLink(data.filename, decryptedData, convKey, data.username);
-      })
-      .catch(err => console.error("Decryption failed:", err));
-  }
-};
 
 document.getElementById("send-btn").addEventListener("click", sendMessage);
 document.getElementById("message-input").addEventListener("keypress", function (event) {
@@ -93,7 +147,17 @@ function sendMessage() {
   const reciever = document.getElementById("who-to-send").value;
   const message = messageInputDiv.innerHTML.trim();
   const file = fileInput.files[0];
-   if (!message && !file) return; // Do nothing if both are empty.
+  
+  // Check if the socket is open before sending
+  if (socket.readyState !== WebSocket.OPEN) {
+    displaySystemMessage("Cannot send message. Connection to server lost. Trying to reconnect...");
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      connectWebSocket();
+    }
+    return;
+  }
+  
+  if (!message && !file) return; // Do nothing if both are empty.
 
   // Determine the conversation key.
   let convKey = "All";
@@ -129,6 +193,7 @@ function sendMessage() {
 
 document.getElementById("logout-btn").addEventListener("click", () => {
   localStorage.removeItem("username");
+  localStorage.removeItem("authenticated");
   window.location.href = "login.html";
 });
 

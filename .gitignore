@@ -1,23 +1,33 @@
-# Node.js
+# Dependency directories
 node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
 
-# Environment variables
+# Environment configuration
 .env
 .env.local
-.env.development
-.env.test
-.env.production
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Logs
-logs/
-*.log
+# Build outputs
+dist/
+build/
 
-# Operating System Files
+# OS files
 .DS_Store
 Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
 # IDE/Editor folders
 .idea/
@@ -26,8 +36,5 @@ Thumbs.db
 *.sublime-workspace
 
 # Build directories
-/dist
-/build
 .history
 chat_logs
-node_modules

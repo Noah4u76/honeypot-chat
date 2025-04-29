@@ -1,0 +1,10 @@
+[build]
+builder = "DOCKERFILE"
+watchPatterns = ["**/*"]
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[variables]
+MONGODB_URI = "Your MongoDB connection string goes here" 

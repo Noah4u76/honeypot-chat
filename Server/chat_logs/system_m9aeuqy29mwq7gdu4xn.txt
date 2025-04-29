@@ -1,2 +1,0 @@
-[2025-04-09T20:57:42.131Z] SYSTEM: Server started
-[2025-04-09T20:57:52.627Z] SYSTEM: user1 joined the chat.

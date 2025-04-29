@@ -5,6 +5,12 @@
   <title>Chat Room</title>
   <link rel="stylesheet" href="chat.css">
   <script src="encryption.js"></script>
+  <script>
+    // Check authentication before loading chat
+    if (!localStorage.getItem("username") || !localStorage.getItem("authenticated")) {
+      window.location.href = "login.html";
+    }
+  </script>
   <script src="chat.js" defer></script>
 </head>
 <body>

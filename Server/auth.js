@@ -5,39 +5,33 @@ import mysql from 'mysql2'
 import mongoose from 'mongoose'
 
 // Use the current working directory as the base path for users.json
-
 const usersFile = path.join(process.cwd(), "users.json");
 
+// For MongoDB connection
+const uri = process.env.MONGODB_URI;
+let mongoConnected = false;
+let User;
 
+// Try to connect to MongoDB, but don't stop the application if it fails
+if (uri) {
+  try {
+    await mongoose.connect(uri);
+    console.log("MongoDB Connected");
+    mongoConnected = true;
 
+    const userSchema = new mongoose.Schema({
+      username: { type: String, unique: true, required: true },
+      password: { type: String, required: true }
+    });
 
-const uri = 'mongodb://0.0.0.0:27017/USERS';
-
-
-try {
-  await mongoose.connect(uri);
-  console.log("✅ MongoDB Connected");
-} catch (err) {
-  console.error("❌ MongoDB Connection Error:", err);
+    User = mongoose.model('User', userSchema);
+  } catch (err) {
+    console.error("❌ MongoDB Connection Error:", err);
+    console.log("📢 Continuing with local file-based authentication");
+  }
+} else {
+  console.log("⚠️ No MONGODB_URI environment variable found. Using local file-based authentication.");
 }
-
-const userSchema = new mongoose.Schema({
-  username: { type: String, unique: true, required: true },
-  password: { type: String, required: true }
-});
-
-const User = mongoose.model('User', userSchema);
-
-
-
-
-
-
-
-
-
-
-
 
 // Password validation function
 function validatePassword(password) {
@@ -75,87 +69,67 @@ export async function handleLogin(client, username, password, clientIP) {
     return false;
   }
 
+  // Load users from local file
   let users = [];
   try {
     const data = await fs.readFile(usersFile, 'utf8');
     users = data.trim() ? JSON.parse(data) : [];
-    console.log("Loaded users:", users);
+    console.log("Loaded users from file:", users);
   } catch (error) {
-    /*if (error.code === 'ENOENT') {
-      console.log("users.json not found, creating a new one at", usersFile);
+    console.error("Error reading users.json:", error);
+    // Try to create the file if it doesn't exist
+    if (error.code === 'ENOENT') {
       try {
         await fs.writeFile(usersFile, JSON.stringify([], null, 2));
-        users = [];
+        console.log("Created new users.json file");
       } catch (err) {
         console.error("Error creating users.json:", err);
-        client.send(JSON.stringify({ type: "error", error: "Server error." }));
-        return false;
       }
-    } else {
-      console.error("Error reading users.json:", error);
-      client.send(JSON.stringify({ type: "error", error: "Server error." }));
-      return false;
-    }*/
-      console.error("Error reading users.json:", error);
-      client.send(JSON.stringify({ type: "error", error: "Server error." }));
-      return false;
+    }
   }
 
-  let user = null;
-
-  try {
-    // Wait for the result of the MySQL query
-    user = await User.findOne({ username }); // ✅ assigning to outer variable
-    if (!user) 
-    {
-      console.log('User does not exist.');
-    } 
-    else 
-    {
-      console.log('User:', user);
-    }
-  } catch (err) 
-  {
-    console.error('Error executing query:', err);
-    client.send(JSON.stringify({ type: "error", error: "Server error." }));
-    return false;
-  }
-  console.log("User is, ", user)
-  if (user === null) {
-    // For new user registration, validate password
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      client.send(JSON.stringify({ 
-        type: "login", 
-        status: "fail", 
-        message: passwordValidation.message 
-      }));
-      return false;
-    }
-
-    /*const hash = await bcrypt.hash(password, 10);
-    users.push({ username, password: hash });
+  // First try MongoDB if available
+  if (mongoConnected) {
     try {
-      await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
-      console.log(`Created new user account for ${username}. Updated users.json:`, users);
+      const user = await User.findOne({ username });
+      if (user) {
+        const isValid = await bcrypt.compare(password, user.password);
+        if (isValid) {
+          client.send(JSON.stringify({ type: "login", status: "success" }));
+        } else {
+          client.send(JSON.stringify({ type: "login", status: "fail", reason: "invalid_password", message: "Invalid password." }));
+        }
+        return isValid;
+      }
     } catch (err) {
-      console.error("Error writing to users.json:", err);
-      client.send(JSON.stringify({ type: "error", error: "Server error." }));
-      return false;
+      console.error('Error querying MongoDB:', err);
+      // Fall back to file-based auth if MongoDB query fails
     }
-    client.send(JSON.stringify({ type: "login", status: "success" }));
-    return true;*/
-  } 
-  else 
-  {
-    // Existing user login
-    const isValid = await bcrypt.compare(password, user.password);
-    client.send(JSON.stringify({ type: "login", status: isValid ? "success" : "fail" }));
+  }
+
+  // Fall back to file-based authentication
+  const userFromFile = users.find(u => u.username === username);
+  if (userFromFile) {
+    const isValid = await bcrypt.compare(password, userFromFile.password);
+    if (isValid) {
+      client.send(JSON.stringify({ type: "login", status: "success" }));
+    } else {
+      client.send(JSON.stringify({ type: "login", status: "fail", reason: "invalid_password", message: "Invalid password." }));
+    }
     return isValid;
+  } else {
+    // User doesn't exist - suggest registration
+    client.send(JSON.stringify({ 
+      type: "login", 
+      status: "fail", 
+      reason: "user_not_found",
+      message: "User not found. Please check your username or create a new account." 
+    }));
+    return false;
   }
 }
 
-// Function to handle explicit registration (if you want to implement a separate registration process)
+// Function to handle explicit registration
 export async function handleRegistration(client, username, password) {
   if (!username || !password) {
     client.send(JSON.stringify({ 
@@ -163,7 +137,7 @@ export async function handleRegistration(client, username, password) {
       status: "fail", 
       message: "Username and password required." 
     }));
-    return;
+    return false;
   }
 
   // Validate password strength
@@ -174,9 +148,10 @@ export async function handleRegistration(client, username, password) {
       status: "fail", 
       message: passwordValidation.message 
     }));
-    return;
+    return false;
   }
 
+  // Load existing users from file
   let users = [];
   try {
     const data = await fs.readFile(usersFile, 'utf8');
@@ -193,7 +168,7 @@ export async function handleRegistration(client, username, password) {
           status: "fail", 
           message: "Server error." 
         }));
-        return;
+        return false;
       }
     } else {
       console.error("Error reading users.json:", error);
@@ -202,19 +177,36 @@ export async function handleRegistration(client, username, password) {
         status: "fail", 
         message: "Server error." 
       }));
-      return;
+      return false;
     }
   }
 
-  // Check if username already exists
-  let user = await User.findOne({ username });
-  if (user) {
+  // Check if username already exists in file
+  if (users.some(u => u.username === username)) {
     client.send(JSON.stringify({ 
       type: "registration", 
       status: "fail", 
       message: "Username already exists." 
     }));
-    return;
+    return false;
+  }
+
+  // Check MongoDB if connected
+  if (mongoConnected) {
+    try {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+        client.send(JSON.stringify({ 
+          type: "registration", 
+          status: "fail", 
+          message: "Username already exists in database." 
+        }));
+        return false;
+      }
+    } catch (err) {
+      console.error("Error checking username in MongoDB:", err);
+      // Continue with file-based registration
+    }
   }
 
   // Create new user
@@ -222,23 +214,26 @@ export async function handleRegistration(client, username, password) {
   users.push({ username, password: hash });
   
   try {
+    // Save to file
     await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
-
-    const newUser = new User({ username, password: hash });
-    await newUser.save();
-
-
-
-    console.log(`Created new user account for ${username}`);
+    console.log(`Created new user account for ${username} in users.json`);
+    
+    // Save to MongoDB if connected
+    if (mongoConnected) {
+      try {
+        const newUser = new User({ username, password: hash });
+        await newUser.save();
+        console.log(`Created user in MongoDB: ${username}`);
+      } catch (err) {
+        console.error("Failed to create user in MongoDB:", err);
+      }
+    }
     
     client.send(JSON.stringify({ 
       type: "registration", 
       status: "success" 
     }));
-
-
-
-
+    return true;
   } catch (err) {
     console.error("Error writing to users.json:", err);
     client.send(JSON.stringify({ 
@@ -246,5 +241,6 @@ export async function handleRegistration(client, username, password) {
       status: "fail", 
       message: "Server error." 
     }));
+    return false;
   }
 }

@@ -6,29 +6,29 @@ import mysql from 'mysql2'
 
 
 
-const pool = mysql.createPool({
+/*const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
   password: '',
   database: 'USERS',
-}).promise()
+}).promise()*/
 
 
 
 
-async function getUserIDFromDatabase(username) {
+/*async function getUserIDFromDatabase(username) {
   const [rows] = await pool.query(`SELECT USER_ID FROM USER WHERE USERNAME = ?`, [username]);
   return rows;
-}
+}*/
 
 
-const result = await getUserIDFromDatabase("user1")
-console.log("user id ", result)
+/*const result = await getUserIDFromDatabase("user1")
+console.log("user id ", result)*/
 
 
 
 
-const MESSAGE_TABLE = await pool.query(`CREATE TABLE IF NOT EXISTS MESSAGE (
+/*const MESSAGE_TABLE = await pool.query(`CREATE TABLE IF NOT EXISTS MESSAGE (
   MESSAGE_ID INT NOT NULL AUTO_INCREMENT,
   SENDER_ID INT NOT NULL,
   RECEIVER_ID INT, -- NULL for global messages
@@ -38,7 +38,7 @@ const MESSAGE_TABLE = await pool.query(`CREATE TABLE IF NOT EXISTS MESSAGE (
   PRIMARY KEY(MESSAGE_ID),
   FOREIGN KEY (SENDER_ID) REFERENCES USER(USER_ID),
   FOREIGN KEY (RECEIVER_ID) REFERENCES USER(USER_ID)
-)`)
+)`)*/
 
 
 
@@ -107,7 +107,7 @@ export async function handleMessage(client, username, message, reciever, wss) {
   });
 
 
-  const reciever_id = await getUserIDFromDatabase(reciever);
+  /*const reciever_id = await getUserIDFromDatabase(reciever);
   const sender_id = await getUserIDFromDatabase(username);
 
   console.log("reciver " ,reciever)
@@ -124,7 +124,7 @@ export async function handleMessage(client, username, message, reciever, wss) {
   else
   {
     const message = await pool.query(`INSERT INTO MESSAGE (SENDER_ID, RECEIVER_ID, CONTENT, IS_FILE) VALUES (?, ?, ?, ?)`, [sender_id[0].USER_ID,reciever_id[0].USER_ID,encryptedMessage,false]); // ✅ assigning to outer variable
-  }
+  }*/
   
 
 

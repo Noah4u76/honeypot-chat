@@ -13,6 +13,7 @@
   "dependencies": {
     "bcrypt": "^5.1.1",
     "crypto-js": "^4.2.0",
+    "express": "^5.1.0",
     "fs": "^0.0.1-security",
     "mongodb": "^6.15.0",
     "mongoose": "^8.13.2",

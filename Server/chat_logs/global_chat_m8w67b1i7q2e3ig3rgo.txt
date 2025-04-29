@@ -1,2 +1,0 @@
-[2025-03-30T21:55:09.354Z] user1 said: hello
-[2025-03-30T21:55:23.116Z] user3 said: how are you
