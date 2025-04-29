@@ -20,6 +20,9 @@ let isRateLimited = false;
 let rateLimitEndTime = 0;
 let rateLimitTimer = null;
 
+// Dark mode state
+let isDarkMode = localStorage.getItem("darkMode") === "true";
+
 // Add file validation constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB max file size
 const ALLOWED_FILE_TYPES = [
@@ -1028,6 +1031,9 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Initialize file upload handling
   handleFileSelection();
+
+  // Dark mode toggle functionality
+  document.getElementById("dark-mode-btn").addEventListener("click", toggleDarkMode);
 });
 
 // Function to handle rate limit errors
@@ -1143,3 +1149,28 @@ function updateInputStateForRateLimit(isLimited) {
     fileInput.disabled = false;
   }
 }
+
+// Dark mode toggle functionality
+function toggleDarkMode() {
+  isDarkMode = !isDarkMode;
+  
+  // Update the UI
+  if (isDarkMode) {
+    document.documentElement.classList.add("dark-mode");
+    document.getElementById("dark-mode-btn").textContent = "☀️"; // Sun icon for light mode
+  } else {
+    document.documentElement.classList.remove("dark-mode");
+    document.getElementById("dark-mode-btn").textContent = "🌙"; // Moon icon for dark mode
+  }
+  
+  // Save the preference
+  localStorage.setItem("darkMode", isDarkMode);
+}
+
+// Initialize dark mode button state
+document.addEventListener("DOMContentLoaded", () => {
+  // Update button icon based on current mode
+  if (isDarkMode) {
+    document.getElementById("dark-mode-btn").textContent = "☀️";
+  }
+});

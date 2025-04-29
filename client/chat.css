@@ -9,11 +9,13 @@ body {
   background-color: #f8f9fa;
   text-align: center;
   margin: 0;
+  transition: all 0.3s ease;
 }
 
 h2 {
   margin-top: 20px;
   color: #333;
+  transition: color 0.3s ease;
 }
 
 /* Chat container */
@@ -25,6 +27,7 @@ h2 {
   border-radius: 8px;
   box-shadow: 0 0 15px rgba(0,0,0,0.1);
   padding: 15px;
+  transition: all 0.3s ease;
 }
 
 #conversation-header {
@@ -499,4 +502,125 @@ button.disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Dark Mode Styles */
+.dark-mode body {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+.dark-mode h2 {
+  color: #e0e0e0;
+}
+
+.dark-mode #chat-container {
+  background: #1e1e1e;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+.dark-mode #chat-box {
+  border-color: #333;
+  background: #2a2a2a;
+}
+
+.dark-mode #conversation-header {
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+.dark-mode .message.sent {
+  background: #264033;
+  color: #e0e0e0;
+}
+
+.dark-mode .message.received {
+  background: #263240;
+  color: #e0e0e0;
+}
+
+.dark-mode .message.system {
+  background: #333;
+  color: #ccc;
+}
+
+.dark-mode #formatting-toolbar button,
+.dark-mode #emoji-btn,
+.dark-mode #who-to-send,
+.dark-mode #file-label {
+  background-color: #333;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.dark-mode #formatting-toolbar button:hover,
+.dark-mode #emoji-btn:hover,
+.dark-mode #file-label:hover {
+  background-color: #444;
+  border-color: #666;
+}
+
+.dark-mode .message-input {
+  background-color: #2a2a2a;
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+.dark-mode .emoji-panel {
+  background: #333;
+  border-color: #555;
+}
+
+.dark-mode .emoji-panel .emoji:hover {
+  background-color: #444;
+}
+
+.dark-mode #send-btn {
+  background: #0d559d;
+}
+
+.dark-mode #send-btn:hover {
+  background: #0a437f;
+}
+
+.dark-mode #logout-btn {
+  background: #a61c2e;
+}
+
+.dark-mode #logout-btn:hover {
+  background: #7a151f;
+}
+
+.dark-mode .file-scan-indicator {
+  background-color: #333;
+  color: #e0e0e0;
+}
+
+/* Dark mode toggle button */
+#dark-mode-btn {
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+#dark-mode-btn:hover {
+  transform: scale(1.1);
+}
+
+.dark-mode #dark-mode-btn {
+  background-color: #444;
+  border-color: #666;
+}
+
+/* Dark mode for typing indicator */
+.dark-mode .typing-indicator {
+  background-color: #333;
+  color: #ccc;
+}
+
+/* Dark mode for rate limit notice */
+.dark-mode .rate-limit-notice {
+  background-color: #333;
+  border-color: #555;
+  color: #e0e0e0;
 }

@@ -10,6 +10,9 @@
     if (!localStorage.getItem("username") || !localStorage.getItem("authenticated")) {
       window.location.href = "login.html";
     }
+    
+    // Check for dark mode preference
+    document.documentElement.className = localStorage.getItem("darkMode") === "true" ? "dark-mode" : "";
   </script>
   <script src="chat.js" defer></script>
 </head>
@@ -25,6 +28,7 @@
         <button type="button" id="bold-btn"><b>B</b></button>
         <button type="button" id="italic-btn"><i>I</i></button>
         <button type="button" id="underline-btn"><u>U</u></button>
+        <button type="button" id="dark-mode-btn">🌙</button>
       </div>
       <div id="message-input" class="message-input" contenteditable="true"></div>
       <button id="emoji-btn">😊</button>
