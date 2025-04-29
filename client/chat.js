@@ -15,6 +15,11 @@ const userPresence = {};
 let typingTimer;
 const TYPING_TIMER_LENGTH = 1000; // 1 second
 
+// Add rate limit timeout variables
+let isRateLimited = false;
+let rateLimitEndTime = 0;
+let rateLimitTimer = null;
+
 function connectWebSocket() {
   socket = new WebSocket(SERVER_ADDRESS);
   
@@ -69,6 +74,11 @@ function connectWebSocket() {
       }
     } else if (data.type === "error") {
       console.error("Error from server:", data.error);
+      
+      // Check if this is a rate limit error
+      if (data.error && data.error.includes("Rate limit exceeded")) {
+        handleRateLimitError(data.error);
+      }
     } else if (data.type === "file") {
       // Decrypt and display a file message.
       window.decrypt(data.data)
@@ -328,6 +338,13 @@ function changeUserList(userlist) {
 
 // Sends a text message and/or file, and optimistically displays the text message.
 function sendMessage() {
+  // Don't allow sending if rate limited
+  if (isRateLimited) {
+    const remainingSeconds = Math.ceil((rateLimitEndTime - Date.now()) / 1000);
+    displaySystemMessage(`You can't send messages for ${remainingSeconds} more seconds due to rate limiting.`);
+    return;
+  }
+  
   const messageInputDiv = document.getElementById("message-input");
   const fileInput = document.getElementById("fileInput");
   const receiverDropdown = document.getElementById("who-to-send");
@@ -731,3 +748,117 @@ document.addEventListener("DOMContentLoaded", () => {
   
   console.log("Chat interface initialized with conversation:", activeConversation);
 });
+
+// Function to handle rate limit errors
+function handleRateLimitError(errorMessage) {
+  // Extract seconds from error message
+  const secondsMatch = errorMessage.match(/Wait (\d+) seconds|Timed out for (\d+) seconds/);
+  if (!secondsMatch) return;
+  
+  const seconds = parseInt(secondsMatch[1] || secondsMatch[2], 10);
+  if (isNaN(seconds)) return;
+  
+  // Set rate limit state
+  isRateLimited = true;
+  rateLimitEndTime = Date.now() + (seconds * 1000);
+  
+  // Display rate limit notification
+  showRateLimitNotification(seconds);
+  
+  // Clear any existing timer
+  if (rateLimitTimer) {
+    clearInterval(rateLimitTimer);
+  }
+  
+  // Start countdown timer
+  rateLimitTimer = setInterval(updateRateLimitCountdown, 1000);
+  
+  // Disable input and send button
+  updateInputStateForRateLimit(true);
+}
+
+// Show rate limit notification
+function showRateLimitNotification(seconds) {
+  // Create rate limit notification element if it doesn't exist
+  let rateLimitNotice = document.getElementById("rate-limit-notice");
+  if (!rateLimitNotice) {
+    rateLimitNotice = document.createElement("div");
+    rateLimitNotice.id = "rate-limit-notice";
+    rateLimitNotice.className = "rate-limit-notice";
+    document.getElementById("chat-container").insertBefore(
+      rateLimitNotice, 
+      document.getElementById("input-area")
+    );
+  }
+  
+  rateLimitNotice.innerHTML = `
+    <div class="rate-limit-icon">⚠️</div>
+    <div class="rate-limit-message">
+      <strong>Rate limit exceeded!</strong><br>
+      You're sending messages too quickly. Please wait <span id="rate-limit-countdown">${seconds}</span> seconds.
+    </div>
+  `;
+  
+  // Show the notification
+  rateLimitNotice.style.display = "flex";
+}
+
+// Update countdown timer
+function updateRateLimitCountdown() {
+  const remainingSeconds = Math.ceil((rateLimitEndTime - Date.now()) / 1000);
+  const countdownElement = document.getElementById("rate-limit-countdown");
+  
+  if (countdownElement) {
+    countdownElement.textContent = remainingSeconds.toString();
+  }
+  
+  // If timer has expired
+  if (remainingSeconds <= 0) {
+    // Clear interval
+    clearInterval(rateLimitTimer);
+    rateLimitTimer = null;
+    
+    // Reset rate limit state
+    isRateLimited = false;
+    
+    // Hide notification
+    const rateLimitNotice = document.getElementById("rate-limit-notice");
+    if (rateLimitNotice) {
+      rateLimitNotice.style.display = "none";
+    }
+    
+    // Enable input and send button
+    updateInputStateForRateLimit(false);
+  }
+}
+
+// Update input state based on rate limit
+function updateInputStateForRateLimit(isLimited) {
+  const messageInput = document.getElementById("message-input");
+  const sendButton = document.getElementById("send-btn");
+  const fileInput = document.getElementById("fileInput");
+  
+  if (isLimited) {
+    // Disable input
+    messageInput.setAttribute("contenteditable", "false");
+    messageInput.classList.add("disabled");
+    
+    // Disable send button
+    sendButton.disabled = true;
+    sendButton.classList.add("disabled");
+    
+    // Disable file input
+    fileInput.disabled = true;
+  } else {
+    // Enable input
+    messageInput.setAttribute("contenteditable", "true");
+    messageInput.classList.remove("disabled");
+    
+    // Enable send button
+    sendButton.disabled = false;
+    sendButton.classList.remove("disabled");
+    
+    // Enable file input
+    fileInput.disabled = false;
+  }
+}
