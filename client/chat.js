@@ -433,7 +433,8 @@ function displayMessage(username, message, type, convKey = "All") {
     
     const contentSpan = document.createElement("span");
     contentSpan.className = "content";
-    contentSpan.textContent = message;
+    // Use innerHTML instead of textContent to render HTML formatting
+    contentSpan.innerHTML = message;
     
     messageDiv.appendChild(userSpan);
     messageDiv.appendChild(contentSpan);
@@ -477,7 +478,8 @@ function loadConversation() {
         link.textContent = `📎 ${item.fileName}`;
         contentSpan.appendChild(link);
       } else {
-        contentSpan.textContent = item.message;
+        // Use innerHTML instead of textContent to render HTML formatting
+        contentSpan.innerHTML = item.message;
       }
       
       messageDiv.appendChild(userSpan);
@@ -669,15 +671,56 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Formatting buttons for Bold, Italic, Underline.
+  // Improved Formatting buttons for Bold, Italic, Underline.
   document.getElementById("bold-btn").addEventListener("click", () => {
-    document.execCommand("bold");
+    // Focus the input field first
+    messageInput.focus();
+    // Try standard execCommand first
+    const success = document.execCommand("bold");
+    if (!success) {
+      // Fallback for browsers that don't support execCommand
+      const selectedText = window.getSelection().toString();
+      if (selectedText) {
+        insertAtCaret(messageInput, `<b>${selectedText}</b>`);
+      } else {
+        insertAtCaret(messageInput, "<b>Bold text</b>");
+      }
+    }
+    saveCaretPosition(messageInput);
   });
+  
   document.getElementById("italic-btn").addEventListener("click", () => {
-    document.execCommand("italic");
+    // Focus the input field first
+    messageInput.focus();
+    // Try standard execCommand first
+    const success = document.execCommand("italic");
+    if (!success) {
+      // Fallback for browsers that don't support execCommand
+      const selectedText = window.getSelection().toString();
+      if (selectedText) {
+        insertAtCaret(messageInput, `<i>${selectedText}</i>`);
+      } else {
+        insertAtCaret(messageInput, "<i>Italic text</i>");
+      }
+    }
+    saveCaretPosition(messageInput);
   });
+  
   document.getElementById("underline-btn").addEventListener("click", () => {
-    document.execCommand("underline");
+    // Focus the input field first
+    messageInput.focus();
+    // Try standard execCommand first
+    const success = document.execCommand("underline");
+    if (!success) {
+      // Fallback for browsers that don't support execCommand
+      const selectedText = window.getSelection().toString();
+      if (selectedText) {
+        insertAtCaret(messageInput, `<u>${selectedText}</u>`);
+      } else {
+        insertAtCaret(messageInput, "<u>Underlined text</u>");
+      }
+    }
+    saveCaretPosition(messageInput);
   });
 
   // Make sure the conversation header is updated

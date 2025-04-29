@@ -111,8 +111,12 @@ export async function handleMessage(client, username, message, reciever, wss) {
   console.log(`Message from ${username} to ${reciever}: ${message}`);
   await logMessage('message', username, message, reciever);
   
+  // Sanitize message to only allow <b>, <i>, <u> tags
+  // This helps prevent XSS attacks while still allowing formatting
+  const sanitizedMessage = sanitizeMessage(message);
+  
   // Encrypt the message using the existing encryption function
-  const encryptedMessage = encrypt(message);
+  const encryptedMessage = encrypt(sanitizedMessage);
   
   const outgoing = JSON.stringify({ 
     type: "message", 
@@ -120,28 +124,6 @@ export async function handleMessage(client, username, message, reciever, wss) {
     reciever, 
     message: encryptedMessage 
   });
-
-
-  /*const reciever_id = await getUserIDFromDatabase(reciever);
-  const sender_id = await getUserIDFromDatabase(username);
-
-  console.log("reciver " ,reciever)
-  console.log("sender " ,sender_id[0])
-  console.log("sender id " ,sender_id[0].USER_ID)
-
-  console.log("reciever_id length" ,reciever_id.length)
-
-  if(reciever_id.length === 0 && reciever === "All")
-  {
-    console.log("printing to suers")
-    const message = await pool.query(`INSERT INTO MESSAGE (SENDER_ID, RECEIVER_ID, CONTENT, IS_FILE) VALUES (?, ?, ?, ?)`, [sender_id[0].USER_ID,null,encryptedMessage,false]); // ✅ assigning to outer variable
-  }
-  else
-  {
-    const message = await pool.query(`INSERT INTO MESSAGE (SENDER_ID, RECEIVER_ID, CONTENT, IS_FILE) VALUES (?, ?, ?, ?)`, [sender_id[0].USER_ID,reciever_id[0].USER_ID,encryptedMessage,false]); // ✅ assigning to outer variable
-  }*/
-  
-
 
   if (reciever === "All") {
     // Broadcast to everyone
@@ -154,6 +136,23 @@ export async function handleMessage(client, username, message, reciever, wss) {
       }
     });
   }
+}
+
+// Function to sanitize message content to only allow certain HTML tags
+function sanitizeMessage(message) {
+  if (!message) return '';
+  
+  // Replace all HTML tags except b, i, u
+  let sanitized = message
+    // First convert < and > that are part of HTML tags to temp tokens
+    .replace(/<(\/?(b|i|u))[^>]*>/gi, '§$1§')
+    // Then escape all remaining < and > to prevent other HTML
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // Finally restore the allowed tags 
+    .replace(/§(\/?(b|i|u))§/gi, '<$1>');
+  
+  return sanitized;
 }
 
 // Handles file sharing with recipient support

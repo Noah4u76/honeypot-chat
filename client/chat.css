@@ -338,8 +338,29 @@ button {
   display: block;
 }
 
+/* Style for formatted text in messages */
 .message .content {
   display: block;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.message .content b {
+  font-weight: bold;
+}
+
+.message .content i {
+  font-style: italic;
+}
+
+.message .content u {
+  text-decoration: underline;
+}
+
+/* Add a bit more padding for formatted content */
+.message.sent .content,
+.message.received .content {
+  padding: 3px 0;
 }
 
 /* Clear floats after messages */
