@@ -20,6 +20,24 @@ let isRateLimited = false;
 let rateLimitEndTime = 0;
 let rateLimitTimer = null;
 
+// Add file validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB max file size
+const ALLOWED_FILE_TYPES = [
+  // Images
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
+  // Documents
+  'application/pdf', 'text/plain', 
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
+  // Archives (potentially risky, but common)
+  'application/zip', 'application/x-zip-compressed'
+];
+const SUSPICIOUS_EXTENSIONS = [
+  '.exe', '.bat', '.cmd', '.msi', '.vbs', '.js', '.dll', '.com', '.scr', '.jar',
+  '.reg', '.ps1', '.hta', '.pif', '.msc', '.gadget', '.application'
+];
+
 function connectWebSocket() {
   socket = new WebSocket(SERVER_ADDRESS);
   
@@ -336,7 +354,174 @@ function changeUserList(userlist) {
   updateUserListUI();
 }
 
-// Sends a text message and/or file, and optimistically displays the text message.
+// Create a function to validate files before upload
+function validateFileUpload(file) {
+  if (!file) return { valid: false, reason: "No file selected" };
+  
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    const reason = `File is too large (${Math.round(file.size / 1024 / 1024 * 10) / 10}MB). Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`;
+    logSecurityViolation(file, reason);
+    return { valid: false, reason };
+  }
+  
+  // Check file type
+  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+    const reason = `File type ${file.type || 'unknown'} is not allowed.`;
+    logSecurityViolation(file, reason);
+    return { valid: false, reason };
+  }
+  
+  // Check for suspicious extensions
+  const fileName = file.name.toLowerCase();
+  for (const ext of SUSPICIOUS_EXTENSIONS) {
+    if (fileName.endsWith(ext)) {
+      const reason = `Files with extension '${ext}' are not allowed as they may contain malware.`;
+      logSecurityViolation(file, reason);
+      return { valid: false, reason };
+    }
+  }
+  
+  // Check if filename contains double extensions (potential obfuscation)
+  const parts = fileName.split('.');
+  if (parts.length > 2) {
+    // Check if the second-to-last extension is suspicious
+    const secondExtension = `.${parts[parts.length - 2]}`;
+    if (SUSPICIOUS_EXTENSIONS.includes(secondExtension)) {
+      const reason = `File appears to be disguising a suspicious extension (${secondExtension}).`;
+      logSecurityViolation(file, reason);
+      return { valid: false, reason };
+    }
+  }
+  
+  // Additional check for empty files
+  if (file.size === 0) {
+    const reason = "Empty files are not allowed.";
+    logSecurityViolation(file, reason);
+    return { valid: false, reason };
+  }
+  
+  // Advanced check for potential script content in txt files
+  if (file.type === 'text/plain' && file.size < 100000) {  // Only check reasonably sized text files
+    return { valid: true, needsContentScan: true };
+  }
+  
+  // File passed all basic checks
+  return { valid: true };
+}
+
+// Function to handle file selection UI
+function handleFileSelection() {
+  const fileInput = document.getElementById("fileInput");
+  const fileNameDisplay = document.getElementById("selected-file-name");
+  
+  fileInput.addEventListener("change", function() {
+    if (this.files && this.files.length > 0) {
+      const fileName = this.files[0].name;
+      // Display truncated filename
+      fileNameDisplay.textContent = fileName.length > 20 
+        ? fileName.substring(0, 17) + "..." 
+        : fileName;
+      fileNameDisplay.title = fileName; // Show full name on hover
+      
+      // Basic initial validation when file is selected
+      const validation = validateFileUpload(this.files[0]);
+      if (!validation.valid) {
+        displaySystemMessage(`File security check failed: ${validation.reason}`);
+        clearFileInput();
+      }
+    } else {
+      fileNameDisplay.textContent = "";
+    }
+  });
+}
+
+// Function to clear file input
+function clearFileInput() {
+  const fileInput = document.getElementById("fileInput");
+  const fileNameDisplay = document.getElementById("selected-file-name");
+  
+  fileInput.value = "";
+  fileNameDisplay.textContent = "";
+}
+
+// Show file scanning UI
+function showFileScanningUI(show) {
+  const scanIndicator = document.getElementById("file-scan-indicator");
+  scanIndicator.style.display = show ? "flex" : "none";
+}
+
+// Update scanTextFileContent to show scanning UI and log issues
+async function scanTextFileContent(file) {
+  try {
+    // Show scanning indicator
+    showFileScanningUI(true);
+    
+    const text = await readFileAsText(file);
+    
+    // Check for potential script or executable content
+    const suspiciousPatterns = [
+      /<script/i, 
+      /function\s*\(/i, 
+      /eval\s*\(/i, 
+      /exec\s*\(/i, 
+      /ActiveXObject/i,
+      /shell\s*\./i,
+      /document\.write/i,
+      /document\.location/i,
+      /window\.location/i,
+      /CreateObject/i,
+      /\bwscript\b/i
+    ];
+    
+    // Simulate some scanning time (remove in production)
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(text)) {
+        // Hide scanning indicator
+        showFileScanningUI(false);
+        
+        const reason = "File contains potentially malicious script content.";
+        logSecurityViolation(file, reason);
+        
+        return {
+          valid: false,
+          reason
+        };
+      }
+    }
+    
+    // Hide scanning indicator
+    showFileScanningUI(false);
+    
+    return { valid: true };
+  } catch (error) {
+    // Hide scanning indicator
+    showFileScanningUI(false);
+    
+    console.error("Error scanning file content:", error);
+    const reason = "Could not scan file content. Upload blocked for safety.";
+    logSecurityViolation(file, reason);
+    
+    return { 
+      valid: false, 
+      reason
+    };
+  }
+}
+
+// Helper function to read file as text
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = event => resolve(event.target.result);
+    reader.onerror = error => reject(error);
+    reader.readAsText(file);
+  });
+}
+
+// Update the sendMessage function to handle file upload indicator
 function sendMessage() {
   // Don't allow sending if rate limited
   if (isRateLimited) {
@@ -399,22 +584,115 @@ function sendMessage() {
     messageInputDiv.innerHTML = "";
   }
 
-  // If it's a file, read and send it
+  // If it's a file, validate before uploading
   if (file) {
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      const fileData = event.target.result;
+    const validation = validateFileUpload(file);
+    
+    if (!validation.valid) {
+      // Show error message if validation fails
+      displaySystemMessage(`File security check failed: ${validation.reason}`);
+      clearFileInput();
+      return;
+    }
+    
+    // If file needs content scan (text files)
+    if (validation.needsContentScan) {
+      // Show loading message
+      displaySystemMessage("Scanning file content for security...");
+      
+      // Perform content scan
+      scanTextFileContent(file).then(contentValidation => {
+        if (!contentValidation.valid) {
+          displaySystemMessage(`File security check failed: ${contentValidation.reason}`);
+          clearFileInput();
+          return;
+        }
+        
+        // If content scan passes, proceed with upload
+        uploadFile(file, receiver, convKey);
+      });
+    } else {
+      // If no content scan needed, proceed with upload
+      uploadFile(file, receiver, convKey);
+    }
+  }
+}
+
+// Helper function to handle file upload
+function uploadFile(file, receiver, convKey) {
+  // Show upload indicator message
+  const uploadMessageId = Date.now();
+  displaySystemMessage(`Uploading file: ${file.name}...`);
+  
+  // Log security check for monitoring
+  console.log(`[Security] File passed security checks: ${file.name} (${file.type}, ${Math.round(file.size / 1024)}KB)`);
+  
+  const reader = new FileReader();
+  
+  reader.onprogress = function(event) {
+    if (event.lengthComputable) {
+      const percent = Math.round((event.loaded / event.total) * 100);
+      // Update the upload message every 25%
+      if (percent % 25 === 0) {
+        updateUploadProgress(percent);
+      }
+    }
+  };
+  
+  reader.onload = function(event) {
+    const fileData = event.target.result;
+    
+    // Send file data
+    socket.send(JSON.stringify({
+      type: "file",
+      username,
+      filename: file.name,
+      filetype: file.type,
+      data: fileData,
+      reciever: receiver
+    }));
+    
+    // Clear file input
+    clearFileInput();
+    
+    // Show upload complete message
+    displaySystemMessage(`File uploaded successfully: ${file.name}`);
+  };
+  
+  reader.onerror = function() {
+    displaySystemMessage(`Error uploading file: ${file.name}`);
+    clearFileInput();
+  };
+  
+  // Start reading file as data URL
+  reader.readAsDataURL(file);
+}
+
+// Update upload progress message
+function updateUploadProgress(percent) {
+  const progressBar = '█'.repeat(Math.floor(percent / 10)) + '░'.repeat(10 - Math.floor(percent / 10));
+  displaySystemMessage(`Upload progress: ${progressBar} ${percent}%`);
+}
+
+// Log file security violation for potential malware
+function logSecurityViolation(file, reason) {
+  console.warn(`[Security] Blocked file upload - potential malware: ${file.name} (${file.type}, ${Math.round(file.size / 1024)}KB) - Reason: ${reason}`);
+  
+  // In a real application, you might want to send this to the server for monitoring
+  if (socket.readyState === WebSocket.OPEN) {
+    try {
       socket.send(JSON.stringify({
-        type: "file",
+        type: "securityLog",
         username,
         filename: file.name,
         filetype: file.type,
-        data: fileData,
-        reciever: receiver
+        filesize: file.size,
+        reason: reason,
+        timestamp: new Date().toISOString()
       }));
-      fileInput.value = "";
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error logging security violation:", error);
+    }
   }
 }
 
@@ -747,6 +1025,9 @@ document.addEventListener("DOMContentLoaded", () => {
   loadConversation();
   
   console.log("Chat interface initialized with conversation:", activeConversation);
+  
+  // Initialize file upload handling
+  handleFileSelection();
 });
 
 // Function to handle rate limit errors

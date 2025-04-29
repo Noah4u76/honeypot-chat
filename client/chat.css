@@ -435,3 +435,68 @@ button.disabled {
   color: #666666 !important;
   border-color: #bbbbbb !important;
 }
+
+/* File scanning indicator */
+.file-scan-indicator {
+  display: inline-flex;
+  align-items: center;
+  background-color: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 10px 0;
+  font-size: 14px;
+  color: #0d47a1;
+}
+
+.scan-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  border: 2px solid #bbdefb;
+  border-top: 2px solid #1976d2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* File input improvements */
+#file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  margin-right: 5px;
+}
+
+#file-label {
+  display: inline-block;
+  background-color: #f0f0f0;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#file-label:hover {
+  background-color: #e0e0e0;
+}
+
+#fileInput {
+  position: absolute;
+  left: -9999px;
+}
+
+.file-name-display {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #555;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
