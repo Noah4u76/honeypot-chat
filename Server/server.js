@@ -3,6 +3,7 @@ import path from 'path';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto'; // Add crypto for CAPTCHA token generation
 
 import { handleLogin, handleRegistration } from './auth.js';
 import { handleMessage, handleJoin, handleDisconnect, handleFile, handleTypingStatus } from './chat.js';
@@ -11,6 +12,9 @@ import { initKeyStorage, generateKeyPair } from './advanced-encryption.js';
 import { resetExceedCountPeriodically } from './ratelimiting.js';
 import { startKeepAlive } from './keep_alive.js'; // <<< NEW
 import { setBroadcastFunction } from './presence.js';
+
+// CAPTCHA storage - In production, use a proper database or Redis
+const captchas = new Map();
 
 // Paths & Directories Setup
 const __filename = fileURLToPath(import.meta.url);
@@ -46,6 +50,97 @@ app.post('/generate-keys', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate keys' });
   }
 });
+
+// CAPTCHA generation endpoint
+app.get('/api/captcha', (req, res) => {
+  try {
+    // Generate a random CAPTCHA code (6 alphanumeric characters)
+    const captchaCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+    
+    // Generate a token that will be used to verify this CAPTCHA
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    // Store the CAPTCHA code with the token (with 10-minute expiration)
+    captchas.set(token, {
+      code: captchaCode,
+      expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+    });
+    
+    // Clean up expired CAPTCHAs
+    cleanupExpiredCaptchas();
+    
+    // Send both the CAPTCHA code and token to the client
+    res.json({ 
+      token,
+      captchaCode
+    });
+  } catch (error) {
+    console.error('Error generating CAPTCHA:', error);
+    res.status(500).json({ error: 'Failed to generate CAPTCHA' });
+  }
+});
+
+// CAPTCHA verification endpoint
+app.post('/api/verify-captcha', (req, res) => {
+  try {
+    const { token, userInput } = req.body;
+    
+    if (!token || !userInput) {
+      return res.status(400).json({ 
+        valid: false, 
+        message: 'Token and user input are required' 
+      });
+    }
+    
+    // Get stored CAPTCHA data
+    const captchaData = captchas.get(token);
+    
+    // Check if CAPTCHA exists and hasn't expired
+    if (!captchaData) {
+      return res.status(400).json({ 
+        valid: false, 
+        message: 'CAPTCHA token is invalid or expired' 
+      });
+    }
+    
+    if (Date.now() > captchaData.expires) {
+      captchas.delete(token);
+      return res.status(400).json({ 
+        valid: false, 
+        message: 'CAPTCHA has expired' 
+      });
+    }
+    
+    // Verify user input against the stored CAPTCHA code (case-insensitive)
+    const isValid = userInput.toUpperCase() === captchaData.code;
+    
+    // If valid, delete the used CAPTCHA
+    if (isValid) {
+      captchas.delete(token);
+    }
+    
+    res.json({ 
+      valid: isValid,
+      message: isValid ? 'CAPTCHA validation successful' : 'Incorrect CAPTCHA code'
+    });
+  } catch (error) {
+    console.error('Error verifying CAPTCHA:', error);
+    res.status(500).json({ 
+      valid: false, 
+      message: 'Error verifying CAPTCHA' 
+    });
+  }
+});
+
+// Helper function to clean up expired CAPTCHAs
+function cleanupExpiredCaptchas() {
+  const now = Date.now();
+  for (const [token, data] of captchas.entries()) {
+    if (now > data.expires) {
+      captchas.delete(token);
+    }
+  }
+}
 
 // Initialize key storage and logging system
 async function init() {

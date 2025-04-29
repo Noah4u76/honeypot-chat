@@ -58,3 +58,56 @@ body {
   #password-feedback div {
     margin: 3px 0;
   }
+
+  /* CAPTCHA Styles */
+  #captcha-container {
+    margin-bottom: 15px;
+    width: 100%;
+  }
+
+  #captcha-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  #captcha-code {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #333;
+    user-select: none;
+  }
+
+  #refresh-captcha {
+    position: absolute;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #captcha-message {
+    font-size: 12px;
+    height: 16px;
+    margin-top: 5px;
+  }
+
+  .captcha-success {
+    color: green;
+  }
+
+  .captcha-error {
+    color: red;
+  }

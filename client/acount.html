@@ -15,6 +15,15 @@
       <input type="password" id="password" placeholder="Password" required>
       <div id="password-requirements" class="info-text">
       </div>
+      <!-- CAPTCHA Section -->
+      <div id="captcha-container">
+        <div id="captcha-display">
+          <span id="captcha-code">Loading...</span>
+          <button type="button" id="refresh-captcha">↻</button>
+        </div>
+        <input type="text" id="captcha-input" placeholder="Enter CAPTCHA code" required>
+        <div id="captcha-message"></div>
+      </div>
       <button type="submit" id="register-btn">Register Account</button>
     </form>
   </div>

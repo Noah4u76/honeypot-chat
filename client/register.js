@@ -28,6 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const MAX_RECONNECT_ATTEMPTS = 5;
   const RECONNECT_DELAY = 3000; // 3 seconds
   
+  // CAPTCHA variables
+  let captchaToken = '';
+  let captchaVerified = false;
+  
   function connectWebSocket() {
     socket = new WebSocket(SERVER_ADDRESS);
     
@@ -37,7 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
       reconnectAttempts = 0; // Reset reconnect counter
       document.getElementById("connection-status").textContent = "Connected";
       document.getElementById("connection-status").style.color = "green";
-      document.getElementById("register-button").disabled = false;
+      document.getElementById("register-button").disabled = true; // Default to disabled until CAPTCHA is verified
+      
+      // Load CAPTCHA once connected
+      loadCaptcha();
     };
     
     // Handle all incoming messages from the server
@@ -109,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Modify the register button to have an ID
   const registerButton = registerForm.querySelector('button[type="submit"]');
   registerButton.id = "register-button";
-  registerButton.disabled = true; // Disabled until connection is established
+  registerButton.disabled = true; // Disabled until connection is established and CAPTCHA is verified
   
   // Password validation function
   function validatePasswordStrength(password) {
@@ -169,6 +176,99 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // CAPTCHA functions
+  function loadCaptcha() {
+    const captchaCodeElement = document.getElementById("captcha-code");
+    captchaCodeElement.textContent = "Loading...";
+    
+    // Reset verification status
+    captchaVerified = false;
+    document.getElementById("register-button").disabled = true;
+    
+    // Fetch a new CAPTCHA from the server
+    fetch('/api/captcha')
+      .then(response => response.json())
+      .then(data => {
+        captchaToken = data.token;
+        captchaCodeElement.textContent = data.captchaCode;
+      })
+      .catch(error => {
+        console.error('Error loading CAPTCHA:', error);
+        captchaCodeElement.textContent = "Error";
+        document.getElementById("captcha-message").textContent = "Failed to load CAPTCHA";
+        document.getElementById("captcha-message").className = "captcha-error";
+      });
+  }
+  
+  // Verify CAPTCHA input
+  function verifyCaptcha(userInput) {
+    if (!captchaToken) {
+      document.getElementById("captcha-message").textContent = "CAPTCHA not loaded, please refresh";
+      document.getElementById("captcha-message").className = "captcha-error";
+      return Promise.reject("CAPTCHA not loaded");
+    }
+    
+    return fetch('/api/verify-captcha', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: captchaToken,
+        userInput: userInput
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.valid) {
+        document.getElementById("captcha-message").textContent = "CAPTCHA verified";
+        document.getElementById("captcha-message").className = "captcha-success";
+        captchaVerified = true;
+        
+        // Enable the register button if connected
+        if (socket.readyState === WebSocket.OPEN) {
+          document.getElementById("register-button").disabled = false;
+        }
+        
+        return true;
+      } else {
+        document.getElementById("captcha-message").textContent = data.message || "Incorrect CAPTCHA";
+        document.getElementById("captcha-message").className = "captcha-error";
+        captchaVerified = false;
+        document.getElementById("register-button").disabled = true;
+        
+        // Load a new CAPTCHA
+        loadCaptcha();
+        return false;
+      }
+    })
+    .catch(error => {
+      console.error('Error verifying CAPTCHA:', error);
+      document.getElementById("captcha-message").textContent = "Verification failed";
+      document.getElementById("captcha-message").className = "captcha-error";
+      return false;
+    });
+  }
+  
+  // Add CAPTCHA input verification
+  const captchaInput = document.getElementById("captcha-input");
+  if (captchaInput) {
+    captchaInput.addEventListener("blur", function() {
+      if (this.value.trim()) {
+        verifyCaptcha(this.value.trim());
+      }
+    });
+  }
+  
+  // Add refresh button functionality
+  const refreshButton = document.getElementById("refresh-captcha");
+  if (refreshButton) {
+    refreshButton.addEventListener("click", function(e) {
+      e.preventDefault();
+      loadCaptcha();
+    });
+  }
+
   // Listen for form submission
   registerForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -186,6 +286,32 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
+    // Verify CAPTCHA
+    if (!captchaVerified) {
+      const captchaInput = document.getElementById("captcha-input").value.trim();
+      if (!captchaInput) {
+        alert("Please complete the CAPTCHA verification.");
+        return;
+      }
+      
+      verifyCaptcha(captchaInput)
+        .then(isValid => {
+          if (isValid) {
+            processRegistration(username, password);
+          } else {
+            alert("CAPTCHA verification failed. Please try again.");
+          }
+        })
+        .catch(() => {
+          alert("CAPTCHA verification error. Please refresh the page and try again.");
+        });
+    } else {
+      processRegistration(username, password);
+    }
+  });
+  
+  // Process registration after CAPTCHA verification
+  function processRegistration(username, password) {
     // For new account creation, validate password strength
     const existingAccounts = localStorage.getItem("seenAccounts") || "";
     if (!existingAccounts.includes(username)) {
@@ -199,8 +325,8 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("seenAccounts", existingAccounts + "," + username);
     }
 
-    // Send login request to the server
+    // Send registration request to the server
     socket.send(JSON.stringify({ type: "registration", username, password }));
-  });
+  }
 });
   
