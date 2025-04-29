@@ -8,6 +8,13 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000; // 3 seconds
 
+// Store user presence data
+const userPresence = {};
+
+// Typing indicator variables
+let typingTimer;
+const TYPING_TIMER_LENGTH = 1000; // 1 second
+
 function connectWebSocket() {
   socket = new WebSocket(SERVER_ADDRESS);
   
@@ -52,6 +59,14 @@ function connectWebSocket() {
           displaySystemMessage(decryptedMessage);
         })
         .catch(err => console.error("Decryption failed:", err));
+    } else if (data.type === "presence") {
+      // Handle individual presence update
+      updateUserPresence(data.username, data.status);
+    } else if (data.type === "presenceList") {
+      // Handle bulk presence updates
+      for (const [username, presenceData] of Object.entries(data.users)) {
+        updateUserPresence(username, presenceData.status);
+      }
     } else if (data.type === "error") {
       console.error("Error from server:", data.error);
     } else if (data.type === "file") {
@@ -126,27 +141,199 @@ function updateConversationHeader() {
   }
 }
 
+// Add event listeners for the message input to track typing status
+document.getElementById("message-input").addEventListener("input", function() {
+  if (!typingTimer) {
+    // Send typing indicator only if this is a new typing session
+    sendTypingStatus(true);
+  }
+  
+  // Clear any existing timer
+  clearTimeout(typingTimer);
+  
+  // Set a new timer
+  typingTimer = setTimeout(() => {
+    // When timer expires, user has stopped typing
+    sendTypingStatus(false);
+    typingTimer = null;
+  }, TYPING_TIMER_LENGTH);
+});
+
 document.getElementById("send-btn").addEventListener("click", sendMessage);
 document.getElementById("message-input").addEventListener("keypress", function (event) {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     sendMessage();
+    // Clear typing status immediately after sending
+    sendTypingStatus(false);
+    clearTimeout(typingTimer);
+    typingTimer = null;
   }
 });
+
 // When the recipient selection changes, update active conversation and header.
 document.getElementById("who-to-send").addEventListener("change", function () {
   const selected = this.value;
-  activeConversation = selected === "All" ? "All" : [username, selected].sort().join("|");
-  updateConversationHeader();
-  loadConversation();
+  
+  // Don't reload if we're already in this conversation
+  const newConversation = selected === "All" ? "All" : [username, selected].sort().join("|");
+  
+  console.log(`Selection changed from ${activeConversation} to ${newConversation}, selected=${selected}`);
+  
+  if (newConversation !== activeConversation) {
+    activeConversation = newConversation;
+    updateConversationHeader();
+    loadConversation();
+    
+    console.log(`Switched to conversation: ${activeConversation}`);
+  }
 });
+
+// Send typing status to the server
+function sendTypingStatus(isTyping) {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "typing",
+      username: username,
+      isTyping: isTyping
+    }));
+  }
+}
+
+// Update the displayed presence status for a user
+function updateUserPresence(username, status) {
+  // Store the status
+  userPresence[username] = status;
+  
+  // Update the user list UI to show status
+  updateUserListUI();
+  
+  // Show typing indicator in active conversation if applicable
+  updateTypingIndicator();
+}
+
+// Update typing indicator in the chat area
+function updateTypingIndicator() {
+  // Remove any existing typing indicator
+  const existingIndicator = document.getElementById("typing-indicator");
+  if (existingIndicator) {
+    existingIndicator.remove();
+  }
+  
+  const chatMessages = document.getElementById("chat-messages");
+  
+  if (activeConversation === "All") {
+    // For global chat, show all users who are typing
+    const typingUsers = Object.entries(userPresence)
+      .filter(([user, status]) => status === 'typing' && user !== username)
+      .map(([user]) => user);
+    
+    if (typingUsers.length > 0) {
+      const typingDiv = document.createElement("div");
+      typingDiv.id = "typing-indicator";
+      typingDiv.className = "typing-indicator";
+      
+      if (typingUsers.length === 1) {
+        typingDiv.textContent = `${typingUsers[0]} is typing`;
+      } else if (typingUsers.length === 2) {
+        typingDiv.textContent = `${typingUsers[0]} and ${typingUsers[1]} are typing`;
+      } else if (typingUsers.length === 3) {
+        typingDiv.textContent = `${typingUsers[0]}, ${typingUsers[1]} and ${typingUsers[2]} are typing`;
+      } else {
+        typingDiv.textContent = `${typingUsers.length} people are typing`;
+      }
+      
+      chatMessages.appendChild(typingDiv);
+      typingDiv.scrollIntoView({ behavior: "smooth" });
+    }
+  } else {
+    // For private chats
+    const otherUser = activeConversation.split("|").find(u => u !== username);
+    
+    // If the other user is typing, show the indicator
+    if (userPresence[otherUser] === 'typing') {
+      const typingDiv = document.createElement("div");
+      typingDiv.id = "typing-indicator";
+      typingDiv.className = "typing-indicator";
+      typingDiv.textContent = `${otherUser} is typing`;
+      chatMessages.appendChild(typingDiv);
+      
+      // Scroll to the indicator
+      typingDiv.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+}
+
+// Update the user list display to show presence indicators
+function updateUserListUI() {
+  const selectElement = document.getElementById("who-to-send");
+  
+  // Store the currently selected conversation
+  let currentRecipient = selectElement.value;
+  
+  // If we're in a private conversation, get the username of the other person
+  if (activeConversation !== "All") {
+    const otherUser = activeConversation.split("|").find(u => u !== username);
+    // If the current recipient doesn't match who we're talking to, update it
+    if (otherUser !== currentRecipient) {
+      currentRecipient = otherUser;
+    }
+  }
+  
+  // Clear all options except "All"
+  while (selectElement.options.length > 1) {
+    selectElement.remove(1);
+  }
+  
+  // Add back all users with their status indicators
+  for (const user of userList) {
+    if (user !== username) {
+      const option = document.createElement("option");
+      option.value = user;
+      
+      // Add status indicator based on presence
+      const status = userPresence[user] || 'offline';
+      let statusEmoji = '⚪️'; // Default/offline
+      
+      if (status === 'online') {
+        statusEmoji = '🟢';
+      } else if (status === 'typing') {
+        statusEmoji = '✏️';
+      }
+      
+      option.textContent = `${statusEmoji} ${user}`;
+      selectElement.appendChild(option);
+    }
+  }
+  
+  // Try to restore the selected value
+  if (currentRecipient !== "All") {
+    // Find if there's an option that matches our current recipient
+    const matchingOption = Array.from(selectElement.options)
+      .find(option => option.value === currentRecipient);
+    
+    if (matchingOption) {
+      selectElement.value = currentRecipient;
+    }
+  }
+}
+
+// Update changeUserList to call our new UI update function
+function changeUserList(userlist) {
+  userList = userlist;
+  
+  // Use the new function that includes presence indicators
+  updateUserListUI();
+}
+
 // Sends a text message and/or file, and optimistically displays the text message.
 function sendMessage() {
   const messageInputDiv = document.getElementById("message-input");
   const fileInput = document.getElementById("fileInput");
-  const reciever = document.getElementById("who-to-send").value;
-  const message = messageInputDiv.innerHTML.trim();
+  const receiverDropdown = document.getElementById("who-to-send");
   const file = fileInput.files[0];
+  let receiver = receiverDropdown.value;
+  const message = messageInputDiv.innerHTML.trim();
   
   // Check if the socket is open before sending
   if (socket.readyState !== WebSocket.OPEN) {
@@ -159,20 +346,43 @@ function sendMessage() {
   
   if (!message && !file) return; // Do nothing if both are empty.
 
-  // Determine the conversation key.
+  // Determine the conversation key and ensure it's in sync with dropdown
   let convKey = "All";
-  if (reciever && reciever !== "All") {
-    convKey = [username, reciever].sort().join("|");
+  
+  if (activeConversation !== "All") {
+    // Extract the other user from the active conversation
+    const otherUser = activeConversation.split("|").find(u => u !== username);
+    
+    // Update receiver if it doesn't match
+    if (receiver !== otherUser) {
+      receiver = otherUser;
+      
+      // Also update the dropdown to match
+      for (let i = 0; i < receiverDropdown.options.length; i++) {
+        if (receiverDropdown.options[i].value === receiver) {
+          receiverDropdown.selectedIndex = i;
+          break;
+        }
+      }
+    }
+    
+    convKey = activeConversation;
+  } else if (receiver !== "All") {
+    // We're in global chat but sending to specific user, so update the active conversation
+    convKey = [username, receiver].sort().join("|");
+    activeConversation = convKey;
+    updateConversationHeader();
+    loadConversation();
   }
 
-  // If it's a text message, show it immediately.
+  // If it's a text message, show it immediately and send it
   if (message) {
     displayMessage(username, message, "sent", convKey);
-    socket.send(JSON.stringify({ type: "message", username, reciever, message }));
+    socket.send(JSON.stringify({ type: "message", username, reciever: receiver, message }));
     messageInputDiv.innerHTML = "";
   }
 
-  // If it's a file, read and send it.
+  // If it's a file, read and send it
   if (file) {
     const reader = new FileReader();
     reader.onload = function (event) {
@@ -183,7 +393,7 @@ function sendMessage() {
         filename: file.name,
         filetype: file.type,
         data: fileData,
-        reciever
+        reciever: receiver
       }));
       fileInput.value = "";
     };
@@ -197,103 +407,160 @@ document.getElementById("logout-btn").addEventListener("click", () => {
   window.location.href = "login.html";
 });
 
-// Stores a message in the appropriate conversation and renders it if active.
-function displayMessage(user, message, type, convKey = "All") {
-  if (!conversations[convKey]) conversations[convKey] = [];
-  conversations[convKey].push({ user, message, type });
-
-  // Display only if this conversation is active.
-  if (activeConversation === convKey) {
-    const chatDiv = document.getElementById("messages");
-    const msgElement = document.createElement("div");
-    msgElement.classList.add("message", type);
-    msgElement.innerHTML = `<b>${user}:</b> ` + message;
-    chatDiv.appendChild(msgElement);
-    chatDiv.scrollTop = chatDiv.scrollHeight;
+// Displays a message in the appropriate conversation.
+function displayMessage(username, message, type, convKey = "All") {
+  // Initialize the array if it doesn't exist yet.
+  conversations[convKey] = conversations[convKey] || [];
+  
+  // Add message to conversation history.
+  conversations[convKey].push({
+    user: username,
+    message: message,
+    type: type,
+    isFile: false
+  });
+  
+  // If this is the active conversation, display it immediately.
+  if (convKey === activeConversation) {
+    const chatMessages = document.getElementById("chat-messages");
+    
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "message " + type;
+    
+    const userSpan = document.createElement("span");
+    userSpan.className = "user";
+    userSpan.textContent = username;
+    
+    const contentSpan = document.createElement("span");
+    contentSpan.className = "content";
+    contentSpan.textContent = message;
+    
+    messageDiv.appendChild(userSpan);
+    messageDiv.appendChild(contentSpan);
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to the bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 }
 
 // Loads conversation history for the active conversation into the chat box.
 function loadConversation() {
-  const chatDiv = document.getElementById("messages");
-  chatDiv.innerHTML = ""; // Clear current messages.
-  const messages = conversations[activeConversation] || [];
-  messages.forEach(msg => {
-    // Decide if it's from self or another user
-    const cssClass = msg.user === username ? "sent" : "received";
-    const msgElement = document.createElement("div");
-    msgElement.classList.add("message", cssClass);
-    if (msg.type === "file") {
-      // For file messages, create a download link
-      msgElement.innerHTML = `<b>${msg.user}:</b> `;
-      const fileElement = document.createElement("a");
-      fileElement.setAttribute("href", msg.fileData);
-      fileElement.setAttribute("download", msg.filename);
-      fileElement.innerText = `Download file: ${msg.filename}`;
-      fileElement.style.color = "blue";
-      fileElement.style.textDecoration = "underline";
-      msgElement.appendChild(fileElement);
+  const messages = document.getElementById("chat-messages");
+  messages.innerHTML = ""; // Clear the current messages
+  
+  // Get the appropriate conversation history
+  const history = conversations[activeConversation] || [];
+  
+  // Create and append all message elements
+  history.forEach(item => {
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "message " + item.type;
+    
+    // Different display for system messages versus user messages
+    if (item.type === "system") {
+      messageDiv.textContent = item.message;
     } else {
-      // For text messages
-      msgElement.innerHTML = `<b>${msg.user}:</b> ` + msg.message;
+      const userSpan = document.createElement("span");
+      userSpan.className = "user";
+      userSpan.textContent = item.user;
+      
+      const contentSpan = document.createElement("span");
+      contentSpan.className = "content";
+      
+      // If it's a file, create a link
+      if (item.isFile) {
+        const link = document.createElement("a");
+        link.href = item.fileData;
+        link.download = item.fileName;
+        link.textContent = `📎 ${item.fileName}`;
+        contentSpan.appendChild(link);
+      } else {
+        contentSpan.textContent = item.message;
+      }
+      
+      messageDiv.appendChild(userSpan);
+      messageDiv.appendChild(contentSpan);
     }
-    chatDiv.appendChild(msgElement);
+    
+    messages.appendChild(messageDiv);
   });
-  chatDiv.scrollTop = chatDiv.scrollHeight;
-  updateConversationHeader();
+  
+  // Check if we need to show a typing indicator in this conversation
+  updateTypingIndicator();
+  
+  // Scroll to the bottom of the messages
+  messages.scrollTop = messages.scrollHeight;
 }
 
-// Displays a download link for file messages with correct bubble styling.
+// Displays a file link in the appropriate conversation.
 function displayFileLink(filename, fileData, convKey, sender) {
-  if (!conversations[convKey]) conversations[convKey] = [];
-  // We'll store the file message with type "file" so we can re-render it properly.
-  const messageObj = { user: sender, type: "file", filename, fileData };
-  conversations[convKey].push(messageObj);
-  if (activeConversation === convKey) {
-    const chatDiv = document.getElementById("messages");
-    const cssClass = sender === username ? "sent" : "received";
-    const msgElement = document.createElement("div");
-    msgElement.classList.add("message", cssClass);
-    msgElement.innerHTML = `<b>${sender}:</b> `;
-    const fileElement = document.createElement("a");
-    fileElement.setAttribute("href", fileData);
-    fileElement.setAttribute("download", filename);
-    fileElement.innerText = `Download file: ${filename}`;
-    fileElement.style.color = "blue";
-    fileElement.style.textDecoration = "underline";
-    msgElement.appendChild(fileElement);
-    chatDiv.appendChild(msgElement);
-    chatDiv.scrollTop = chatDiv.scrollHeight;
-  }
-}
-
-// Updates the user selection dropdown with the provided user list.
-// It filters out the current user to avoid confusion.
-function changeUserList(userlist) {
-  const selectElement = document.getElementById('who-to-send');
-  while (selectElement.options.length > 1) {
-    selectElement.remove(1);
-  }
-  // Filter out the current user from the user list.
-  userlist.filter(u => u !== username).forEach(element => {
-    const option = document.createElement('option');
-    option.value = element;
-    option.text = element;
-    selectElement.append(option);
+  // Initialize the array if it doesn't exist yet.
+  conversations[convKey] = conversations[convKey] || [];
+  
+  // Add to conversation history.
+  conversations[convKey].push({
+    user: sender,
+    fileName: filename,
+    fileData: fileData,
+    type: sender === username ? "sent" : "received",
+    isFile: true
   });
+  
+  // If this is the active conversation, display it immediately.
+  if (convKey === activeConversation) {
+    const chatMessages = document.getElementById("chat-messages");
+    
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "message " + (sender === username ? "sent" : "received");
+    
+    const userSpan = document.createElement("span");
+    userSpan.className = "user";
+    userSpan.textContent = sender;
+    
+    const contentSpan = document.createElement("span");
+    contentSpan.className = "content";
+    
+    const link = document.createElement("a");
+    link.href = fileData;
+    link.download = filename;
+    link.textContent = `📎 ${filename}`;
+    
+    contentSpan.appendChild(link);
+    messageDiv.appendChild(userSpan);
+    messageDiv.appendChild(contentSpan);
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to the bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 }
 
-// Displays system messages (like join/leave notifications) in the global conversation.
+// Displays a system message in the global conversation only.
 function displaySystemMessage(message) {
-  if (!conversations["All"]) conversations["All"] = [];
-  conversations["All"].push({ user: "System", message, type: "received" });
+  // System messages are only shown in the global chat.
+  conversations["All"] = conversations["All"] || [];
+  
+  // Add message to conversation history.
+  conversations["All"].push({
+    message: message,
+    type: "system"
+  });
+  
+  // If global chat is active, display it immediately.
   if (activeConversation === "All") {
-    const chatDiv = document.getElementById("messages");
-    const msgElement = document.createElement("div");
-    msgElement.classList.add("message", "received");
-    msgElement.innerHTML = `<b>System:</b> ` + message;
-    chatDiv.appendChild(msgElement);
-    chatDiv.scrollTop = chatDiv.scrollHeight;
+    const chatMessages = document.getElementById("chat-messages");
+    
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "message system";
+    messageDiv.textContent = message;
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to the bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 }
 
@@ -412,6 +679,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("underline-btn").addEventListener("click", () => {
     document.execCommand("underline");
   });
-});
 
-updateConversationHeader();
+  // Make sure the conversation header is updated
+  updateConversationHeader();
+  
+  // Load the active conversation (starts with "All")
+  loadConversation();
+  
+  console.log("Chat interface initialized with conversation:", activeConversation);
+});

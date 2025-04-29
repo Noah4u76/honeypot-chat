@@ -5,11 +5,12 @@ import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 
 import { handleLogin, handleRegistration } from './auth.js';
-import { handleMessage, handleJoin, handleDisconnect, handleFile } from './chat.js';
+import { handleMessage, handleJoin, handleDisconnect, handleFile, handleTypingStatus } from './chat.js';
 import { initLogging, logSystemEvent } from './logger.js';
 import { initKeyStorage, generateKeyPair } from './advanced-encryption.js';
 import { resetExceedCountPeriodically } from './ratelimiting.js';
 import { startKeepAlive } from './keep_alive.js'; // <<< NEW
+import { setBroadcastFunction } from './presence.js';
 
 // Paths & Directories Setup
 const __filename = fileURLToPath(import.meta.url);
@@ -68,6 +69,15 @@ const server = app.listen(port, () => {
 
 // Create WebSocket server
 const wss = new WebSocketServer({ server });
+
+// Configure broadcast function for presence updates
+setBroadcastFunction((data) => {
+  wss.clients.forEach(client => {
+    if (client.readyState === client.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+});
 
 // Ping all clients every 30 seconds to keep connections alive
 const PING_INTERVAL = 30000; // 30 seconds
@@ -166,6 +176,14 @@ wss.on('connection', (client, req) => {
             return;
           }
           handlePublicKey(client, parsedData.username, parsedData.publicKey);
+          break;
+
+        case "typing":
+          if (!client.authenticated) {
+            client.send(JSON.stringify({ type: "error", error: "You must be logged in to send typing status." }));
+            return;
+          }
+          handleTypingStatus(client, parsedData.username, parsedData.isTyping, wss);
           break;
 
         default:

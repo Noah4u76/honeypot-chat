@@ -2,6 +2,14 @@ import { applyRateLimit } from './ratelimiting.js';
 import { encrypt } from './encryption.js';
 import { logMessage, logSystemEvent } from './logger.js';
 import mysql from 'mysql2'
+import { 
+  initUserPresence, 
+  removeUserPresence, 
+  setUserTyping, 
+  updateUserStatus,
+  broadcastPresenceUpdate,
+  sendAllPresenceToClient 
+} from './presence.js';
 
 
 
@@ -72,6 +80,13 @@ export async function handleJoin(client, username, wss) {
     lastViolationTime: 0,
     timeoutEnd: 0
   };
+  
+  // Initialize and broadcast user's presence
+  initUserPresence(username);
+  broadcastPresenceUpdate(username);
+  
+  // Send presence data for all online users to the newly connected client
+  sendAllPresenceToClient(client);
   
   // Legacy encryption for notifications
   const notification = JSON.stringify({
@@ -182,6 +197,10 @@ export async function handleDisconnect(client, wss) {
   if (!client.username) return;
   
   removeUser(client.username);
+  // Update presence status to offline and broadcast
+  removeUserPresence(client.username);
+  broadcastPresenceUpdate(client.username);
+  
   console.log(`${client.username} disconnected.`);
   console.log("here is the list ", userList);
   await logSystemEvent(`${client.username} disconnected.`);
@@ -213,4 +232,10 @@ export function sendSystemNotification(wss, message) {
   });
   
   broadcast(notification, wss);
+}
+
+// Handle typing status updates
+export function handleTypingStatus(client, username, isTyping, wss) {
+  setUserTyping(username, isTyping);
+  broadcastPresenceUpdate(username);
 }
