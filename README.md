@@ -1,16 +1,20 @@
-# SecureChat
+# HoneyPot-Chat
 
-SecureChat is a real-time chat system built with Node.js and WebSockets. It supports user authentication authentication with strong password requirements, message encryption, rate limiting, and comprehensive logging. This updated version uses a secure WebSocket connection (wss://) over HTTPS. This chat application serves as a secure chat room for global and private chats between users.
+HoneyPot-Chat is a real-time chat system built with Node.js and WebSockets. It supports user authentication with strong password requirements, message encryption, rate limiting, and comprehensive logging. This application has been migrated to Railway and uses secure WebSocket connections (wss://) for global and private chats between users.
+
+## Live Demo
+
+Visit the live application: [HoneyPot-Chat on Railway](https://honey-pot-chat-production.up.railway.app/)
 
 ## Features
 
 - **Real-Time Messaging:**  
   Send and receive messages instantly using WebSockets, supporting global and private chat communication.
   
-- **User Authentication:**  
-  Users log in using a username and password. Passwords are hashed with bcrypt and stored in a local `users.json` file. New accounts will be required to follow new password security requirements.
+- **Enhanced Authentication:**  
+  Users can create accounts or log in with existing credentials. Passwords are hashed with bcrypt and stored in MongoDB (with file-based fallback). The system includes proper authentication state management and secure redirects.
 
-- **Password Security**
+- **Password Security:**
   - Minimum 8 characters
   - At least one uppercase letter
   - At least one lowercase letter
@@ -18,70 +22,134 @@ SecureChat is a real-time chat system built with Node.js and WebSockets. It supp
   - At least one special character
   - Real-time password strength feedback during account creation
 
+- **Persistent WebSocket Connections:**  
+  WebSocket ping/pong mechanism keeps connections alive even during periods of inactivity. Automatic reconnection with exponential backoff handles network disruptions gracefully.
+
 - **Join/Disconnect Notifications:**  
   When a user joins or disconnects, notifications are broadcast to all connected clients, and newly connected users receive a list of current users.
 
 - **Message Encryption:**  
-  All messages are encrypted, protecting conversation content between clients. This is still a work in progress as keys are hardcoded so the server side can match with client side to be able to effectively decrypt messages.
+  All messages are encrypted, protecting conversation content between clients.
 
 - **Rate Limiting:**  
-  Clients are limited to 5 messages per 5 seconds and 3 file uploads per 1 minute. Exceeding this limit triggers incremental timeouts to prevent spamming. Users will be able to chat again after the timeout period. NOTE: The server side recognizes these notifications and blocks user messages, but the client side does not. Still a work in progress.
+  Clients are limited to 5 messages per 5 seconds and 3 file uploads per 1 minute. Exceeding this limit triggers incremental timeouts to prevent spamming.
 
 - **Formatted Text & Emoji Support:**  
-  Users can now format their text using bold, italics, and underlined text. Users also have the option to choose between a select few emojis for their chats.
+  Users can format their text using bold, italics, and underlined text. A built-in emoji picker allows for expression in conversations.
 
 - **File Sharing:**  
-  Implemented the use for users to easily share files between chats. This allows users to securley download files in the chats, but there is a limit as stated above (3 files per minute). This is used so the server cannot get overwelmed by brute force attacks.
+  Users can securely share files in chats with rate limits to prevent abuse (3 files per minute).
 
-- **Logging:**  
-  A log systems that documents when users logged in, joined a chat, left a chat, etc. Also a security log implementation that gives the time stamps of any bruteforce attacks (only limited to these attacks).
+- **Comprehensive Logging:**  
+  Detailed logging of user activities, connection events, and security incidents.
 
-## Installation
+## Local Installation
 
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/yourusername/SecureChat.git
-cd CPSC-455-Project
+git clone https://github.com/Noah4u76/honeypot-chat.git
+cd honeypot-chat
 npm install
 ```
 
-## Running the Server
+## Running Locally
 
-By default, the server listens on port 8001 using a secured WebSocket connection (wss://). Make sure to change your to your local IP in `chat.js` and `login.js`, as these are static pages.
-
-Within the project go to the `Server` folder:
+Start the server:
 ```bash
-cd Server
+node Server/server.js
 ```
 
-Start the server (connects both server and client side) with:
-```bash
-node server.js
-```
-## Follow the on-screen prompts
+By default, the server listens on port 8001. Access the application at http://localhost:8001.
 
-- **Login:**  
-  Enter your username and password. If the user does not exist, a new account is automatically created with that username and password.
+## Railway Deployment
 
-- **Join:**  
-  Once connected, a join message is sent and you will receive a list of connected users.
+This application is configured for easy deployment on Railway:
 
-- **Chat:**  
-  Type messages to chat with other connected users in global chat or privately with a selected user in the list.
+1. **Prerequisites:**
+   - A [Railway](https://railway.app/) account
+   - [Railway CLI](https://docs.railway.app/develop/cli) installed
+   - A MongoDB Atlas database
+
+2. **Deploy via Railway Dashboard:**
+   - Fork this repository
+   - Link your forked repository to Railway
+   - Railway will automatically detect the Dockerfile and deploy your application
+
+3. **Deploy via Railway CLI:**
+   ```bash
+   # Login to Railway
+   railway login
+
+   # Initialize your project
+   railway init
+
+   # Deploy your application
+   railway up
+   ```
+
+4. **Environment Variables:**
+   - Set the following environment variables in Railway dashboard:
+     - `NODE_ENV=production`
+     - `PORT=8080`
+     - `MONGODB_URI=mongodb+srv://your-username:your-password@your-cluster.mongodb.net/your-database` 
+       (Optional - without this, the app will use file-based authentication)
+
+5. **MongoDB Setup:**
+   - Create a free MongoDB Atlas cluster at https://www.mongodb.com/cloud/atlas
+   - In Atlas, add "0.0.0.0/0" to the IP access list to allow connections from Railway
+   - Update the MONGODB_URI environment variable in Railway with your connection string
+
+## Using the Application
+
+- **Register/Login:**  
+  Create a new account or log in with existing credentials. The system enforces strong password requirements.
+
+- **Global Chat:**  
+  By default, you'll be in the global chat room where all users can see your messages.
+
+- **Private Messaging:**  
+  Select a user from the dropdown to start a private conversation.
+
+- **File Sharing:**  
+  Use the file input to share files with other users.
+
+- **Text Formatting:**  
+  Use the formatting toolbar to make your messages bold, italic, or underlined.
+
+- **Emojis:**  
+  Click the emoji button to access the emoji picker.
 
 - **Logout:**  
-   Use `logout` to disconnect from the chat.
+  Click the logout button to securely end your session.
 
+## Implementation Details
+
+- **Docker Containerization:**  
+  The application is containerized using Docker for consistent deployment across environments.
+
+- **WebSocket Reliability:**  
+  Advanced ping/pong mechanism with configurable intervals ensures persistent connections.
+
+- **Fallback Authentication:**  
+  The system uses MongoDB for authentication when available but gracefully falls back to file-based authentication when needed.
+
+- **Connection Status Indicators:**  
+  Visual feedback on connection status helps users understand when network issues occur.
 
 ## Future Enhancements
 
-- **Create Private Rooms:**
-  Rather than selecting a user from the chat and privately chatting with them, a seperate chat room that has an option to send invites to more than one user. The "Host" of this chat will have moderation tools such as kick users, create room password, etc.
+- **Private Rooms:**
+  Create separate chat rooms with multiple users and room-specific controls.
 
-- **Create an Account Page:**
-  Right now the application automatically creates an account if its not in our users database. For more authentication, creating a page where a user has to manually go in a fill out fields to create an account. Also implementing CAPTCHA when signing up to reduce the amount of bots.
+- **Enhanced Account Management:**
+  Add profile settings, avatar uploads, and account recovery options.
 
-- **Uploading to the internet:**
-  Currently the web application runs on a secure websocket using self signed certificates on HTTPS. Creating a domain for our web application, it will automatically handle this.
+- **End-to-End Encryption:**
+  Implement true end-to-end encryption for maximum privacy.
 
+- **Message Search:**
+  Allow users to search through their message history.
+
+- **Mobile Responsive Design:**
+  Optimize the interface for mobile devices.
