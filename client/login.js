@@ -92,64 +92,6 @@ document.addEventListener("DOMContentLoaded", () => {
   loginButton.id = "login-button";
   loginButton.disabled = true; // Disabled until connection is established
 
-  // Password validation function
-  function validatePasswordStrength(password) {
-    // Create an object to track requirements
-    const requirements = {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /[0-9]/.test(password),
-      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
-    };
-    
-    // Check if all requirements are met
-    const allMet = Object.values(requirements).every(req => req === true);
-    
-    return {
-      valid: allMet,
-      requirements: requirements
-    };
-  }
-
-  // Add password strength feedback as user types
-  const passwordInput = document.getElementById("password");
-  if (passwordInput) {
-    passwordInput.addEventListener("input", function() {
-      const password = this.value;
-      const validation = validatePasswordStrength(password);
-      
-      // Get or create feedback element
-      let feedbackElement = document.getElementById("password-feedback");
-      if (!feedbackElement) {
-        feedbackElement = document.createElement("div");
-        feedbackElement.id = "password-feedback";
-        feedbackElement.style.fontSize = "12px";
-        feedbackElement.style.marginTop = "5px";
-        this.parentNode.insertBefore(feedbackElement, this.nextSibling);
-      }
-      
-      // Update feedback
-      feedbackElement.innerHTML = `
-        <div style="color: ${validation.requirements.length ? 'green' : 'red'}">
-          ${validation.requirements.length ? '✓' : '✗'} At least 8 characters
-        </div>
-        <div style="color: ${validation.requirements.uppercase ? 'green' : 'red'}">
-          ${validation.requirements.uppercase ? '✓' : '✗'} At least one uppercase letter
-        </div>
-        <div style="color: ${validation.requirements.lowercase ? 'green' : 'red'}">
-          ${validation.requirements.lowercase ? '✓' : '✗'} At least one lowercase letter
-        </div>
-        <div style="color: ${validation.requirements.number ? 'green' : 'red'}">
-          ${validation.requirements.number ? '✓' : '✗'} At least one number
-        </div>
-        <div style="color: ${validation.requirements.special ? 'green' : 'red'}">
-          ${validation.requirements.special ? '✓' : '✗'} At least one special character
-        </div>
-      `;
-    });
-  }
-
   // Listen for form submission
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -165,19 +107,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (socket.readyState !== WebSocket.OPEN) {
       alert("Cannot log in. Connection to server lost. Please wait for reconnection or refresh the page.");
       return;
-    }
-    
-    // For new account creation, validate password strength
-    const existingAccounts = localStorage.getItem("seenAccounts") || "";
-    if (!existingAccounts.includes(username)) {
-      const validation = validatePasswordStrength(password);
-      if (!validation.valid) {
-        alert("Your password doesn't meet the security requirements.");
-        return;
-      }
-      
-      // Remember this account for future login attempts
-      localStorage.setItem("seenAccounts", existingAccounts + "," + username);
     }
 
     // Send login request to the server

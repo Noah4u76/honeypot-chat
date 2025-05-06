@@ -1,6 +1,3 @@
-// User presence tracking system
-// Tracks online status and typing indicators for all users
-
 // Store user presence data with their status and last activity timestamp
 const userPresence = new Map();
 

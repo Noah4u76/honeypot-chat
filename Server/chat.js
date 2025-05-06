@@ -1,6 +1,5 @@
 import { applyRateLimit } from './ratelimiting.js';
 import { encrypt } from './encryption.js';
-import { logMessage, logSystemEvent } from './logger.js';
 import mysql from 'mysql2'
 import { 
   initUserPresence, 
@@ -67,7 +66,6 @@ function removeUser(username) {
 export async function handleJoin(client, username, wss) {
   client.username = username;
   console.log(`${username} joined the chat.`);
-  await logSystemEvent(`${username} joined the chat.`);
   
   addUser(username);
   console.log("here is the list ", userList);
@@ -109,7 +107,6 @@ export async function handleMessage(client, username, message, reciever, wss) {
   }
   
   console.log(`Message from ${username} to ${reciever}: ${message}`);
-  await logMessage('message', username, message, reciever);
   
   // Sanitize message to only allow <b>, <i>, <u> tags
   // This helps prevent XSS attacks while still allowing formatting
@@ -165,7 +162,6 @@ export async function handleFile(client, username, sentfilename, sentfiletype, c
   }
   
   console.log(`File from ${username} to ${reciever}: ${sentfilename}`);
-  await logMessage('file', username, `File: ${sentfilename}`, reciever);
   
   // Use the existing encryption function
   const encryptedContents = encrypt(contents);
@@ -198,19 +194,17 @@ export async function handleDisconnect(client, wss) {
   removeUser(client.username);
   // Update presence status to offline and broadcast
   removeUserPresence(client.username);
-  broadcastPresenceUpdate(client.username);
-  
   console.log(`${client.username} disconnected.`);
-  console.log("here is the list ", userList);
-  await logSystemEvent(`${client.username} disconnected.`);
-
-  const disconnectMsg = JSON.stringify({
+  
+  // Only send notification if there was a username attached to the client
+  const notification = JSON.stringify({
     type: "notification",
+    username: client.username,
     userList,
-    message: encrypt(`${client.username} disconnected.`)
+    message: encrypt(`${client.username} left the chat.`)
   });
-
-  broadcast(disconnectMsg, wss);
+  
+  broadcast(notification, wss);
 }
 
 // Broadcast Message

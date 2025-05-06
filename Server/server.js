@@ -7,10 +7,8 @@ import crypto from 'crypto'; // Add crypto for CAPTCHA token generation
 
 import { handleLogin, handleRegistration } from './auth.js';
 import { handleMessage, handleJoin, handleDisconnect, handleFile, handleTypingStatus } from './chat.js';
-import { initLogging, logSystemEvent } from './logger.js';
 import { initKeyStorage, generateKeyPair } from './advanced-encryption.js';
 import { resetExceedCountPeriodically } from './ratelimiting.js';
-import { startKeepAlive } from './keep_alive.js'; // <<< NEW
 import { setBroadcastFunction } from './presence.js';
 
 // CAPTCHA storage - In production, use a proper database or Redis
@@ -142,11 +140,10 @@ function cleanupExpiredCaptchas() {
   }
 }
 
-// Initialize key storage and logging system
+// Initialize key storage
 async function init() {
   await initKeyStorage();
-  await initLogging();
-  await logSystemEvent('Server started');
+  console.log('Server initialized');
 }
 
 // Initialize server
@@ -295,7 +292,7 @@ function handlePublicKey(client, username, publicKey) {
   try {
     setUserPublicKey(username, publicKey);
     client.send(JSON.stringify({ type: "keyExchange", status: "success" }));
-    logSystemEvent(`Public key received from user ${username}`);
+    console.log(`Public key received from user ${username}`);
   } catch (error) {
     console.error("Error storing public key:", error);
     client.send(JSON.stringify({ 
@@ -314,11 +311,8 @@ setInterval(() => {
   });
 }, 60000);
 
-// Start keep-alive pings
+// Initialize the server
 init()
-  .then(() => {
-    startKeepAlive();
-  })
   .catch(error => {
     console.error('Failed to initialize server:', error);
   });

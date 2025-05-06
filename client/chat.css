@@ -24,9 +24,9 @@ h2 {
   max-width: 1000px;
   margin: 20px auto;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0,0,0,0.1);
-  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  padding: 18px;
   transition: all 0.3s ease;
 }
 
@@ -41,13 +41,13 @@ h2 {
 
 /* Chat box */
 #chat-box {
-  border: 1px solid #ddd;
+  border: 1px solid #eaeaea;
   height: 350px;
   overflow-y: auto;
   padding: 10px;
   background: #ffffff;
   text-align: left;
-  border-radius: 5px;
+  border-radius: 8px;
 }
 
 #messages {
@@ -57,23 +57,24 @@ h2 {
 
 /* Message bubbles */
 .message {
-  padding: 8px 12px;
-  border-radius: 5px;
-  margin: 5px 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 8px 0;
   max-width: 70%;
   word-wrap: break-word;
-  line-height: 1.4;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .sent {
-  background: #dcf8c6;
+  background: linear-gradient(135deg, #dcf8c6, #c5f5b1);
   align-self: flex-end;
   text-align: right;
   margin-left: auto;
 }
 
 .received {
-  background: #e3e3e3;
+  background: linear-gradient(135deg, #e3e3e3, #f0f0f0);
   align-self: flex-start;
   text-align: left;
   margin-right: auto;
@@ -94,83 +95,92 @@ h2 {
 
 /* Formatting toolbar */
 #formatting-toolbar {
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 6px;
 }
 
 #formatting-toolbar button {
-  padding: 5px 10px;
-  margin-right: 5px;
+  padding: 6px 12px;
   cursor: pointer;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
   transition: all 0.2s ease;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
 }
 
 #formatting-toolbar button:hover {
-  background-color: #e0e0e0;
-  border-color: #999;
+  background-color: #e9ecef;
+  border-color: #dee2e6;
   transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 /* Contenteditable rich text input */
 .message-input {
   flex: 1 1 auto;
   min-width: 200px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 12px 15px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
   margin: 5px 0;
-  min-height: 40px;
+  min-height: 46px;
+  max-height: 120px;
   overflow-y: auto;
   text-align: left;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 /* Emoji button */
 #emoji-btn {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #f0f0f0;
+  padding: 10px 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  background: #f8f9fa;
   cursor: pointer;
   font-size: 18px;
   margin-right: 5px;
   transition: all 0.2s ease;
 }
 
-#emoji-btn:hover {
-  background-color: #e0e0e0;
-  border-color: #999;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-
 .emoji-panel {
   display: none;
   position: absolute;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 8px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px;
   background: #fff;
   text-align: center;
   z-index: 100;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 
 .emoji-panel .emoji {
   cursor: pointer;
-  font-size: 20px;
-  margin: 0 3px;
-  padding: 5px 8px;
-  border-radius: 4px;
+  font-size: 22px;
+  padding: 8px;
+  border-radius: 6px;
   display: inline-block;
   transition: all 0.2s ease;
 }
 
 .emoji-panel .emoji:hover {
-  background-color: #f0f0f0;
+  background-color: #f8f9fa;
   transform: scale(1.2);
 }
 
@@ -181,42 +191,59 @@ h2 {
 
 #who-to-send {
   margin-right: 5px;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+  font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+#who-to-send:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+#who-to-send option {
+  padding: 8px;
+  background-color: #fff;
 }
 
 button {
   padding: 10px 16px;
-  border-radius: 4px;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   font-size: 15px;
   margin: 5px 0;
   transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 #send-btn {
-  background: #007bff;
-  color: #fff;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  padding: 10px 18px;
 }
 
 #send-btn:hover {
-  background: #0056b3;
+  background: linear-gradient(135deg, #0069d9, #004494);
   transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 #logout-btn {
-  background: #dc3545;
-  color: #fff;
-  margin-left: 5px;
+  background: linear-gradient(135deg, #6c757d, #495057);
+  color: white;
+  font-weight: 500;
 }
 
 #logout-btn:hover {
-  background: #c82333;
+  background: linear-gradient(135deg, #5a6268, #343a40);
   transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 /* Add CSS for presence indicators */
@@ -295,7 +322,8 @@ button {
 
 /* Add styling to dropdown to make presence indicators more visible */
 #who-to-send option {
-  padding: 5px;
+  padding: 8px;
+  background-color: #fff;
 }
 
 /* Make sure we have basic styling for system messages */
@@ -470,23 +498,25 @@ button.disabled {
 
 /* File input improvements */
 #file-upload-wrapper {
-  display: flex;
-  align-items: center;
-  margin-right: 5px;
+  margin: 0 8px;
+  position: relative;
 }
 
 #file-label {
   display: inline-block;
-  background-color: #f0f0f0;
   padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 14px;
 }
 
 #file-label:hover {
-  background-color: #e0e0e0;
+  background-color: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 #fileInput {
@@ -506,7 +536,7 @@ button.disabled {
 
 /* Dark Mode Styles */
 .dark-mode body {
-  background-color: #121212;
+  background-color: #1a1a1a;
   color: #e0e0e0;
 }
 
@@ -515,54 +545,55 @@ button.disabled {
 }
 
 .dark-mode #chat-container {
-  background: #1e1e1e;
-  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+  background: #242424;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
 .dark-mode #chat-box {
-  border-color: #333;
   background: #2a2a2a;
+  border-color: #3a3a3a;
 }
 
 .dark-mode #conversation-header {
-  border-color: #444;
   color: #e0e0e0;
+  border-bottom: 1px solid #3a3a3a;
 }
 
 .dark-mode .message.sent {
-  background: #264033;
+  background: linear-gradient(135deg, #054d26, #076d36);
   color: #e0e0e0;
 }
 
 .dark-mode .message.received {
-  background: #263240;
+  background: linear-gradient(135deg, #383838, #454545);
   color: #e0e0e0;
 }
 
 .dark-mode .message.system {
-  background: #333;
-  color: #ccc;
+  background: #383838;
+  color: #e0e0e0;
 }
 
 .dark-mode #formatting-toolbar button,
 .dark-mode #emoji-btn,
-.dark-mode #who-to-send,
-.dark-mode #file-label {
-  background-color: #333;
-  border-color: #555;
+.dark-mode #file-label,
+.dark-mode #who-to-send {
+  background-color: #383838;
+  border-color: #454545;
   color: #e0e0e0;
 }
 
 .dark-mode #formatting-toolbar button:hover,
 .dark-mode #emoji-btn:hover,
 .dark-mode #file-label:hover {
-  background-color: #444;
-  border-color: #666;
+  background-color: #454545;
+  border-color: #505050;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .dark-mode .message-input {
-  background-color: #2a2a2a;
-  border-color: #444;
+  background: #383838;
+  border-color: #454545;
   color: #e0e0e0;
 }
 

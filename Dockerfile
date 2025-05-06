@@ -9,9 +9,8 @@ COPY package*.json ./
 RUN npm ci
 
 # Copy application code
-COPY Server/ ./Server/
+COPY Server/ ./server/
 COPY client/ ./client/
-COPY certs/ ./certs/
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -20,4 +19,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["node", "Server/server.js"] 
+CMD ["node", "server/server.js"] 
