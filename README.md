@@ -136,20 +136,3 @@ This application is configured for easy deployment on Railway:
 
 - **Connection Status Indicators:**  
   Visual feedback on connection status helps users understand when network issues occur.
-
-## Future Enhancements
-
-- **Private Rooms:**
-  Create separate chat rooms with multiple users and room-specific controls.
-
-- **Enhanced Account Management:**
-  Add profile settings, avatar uploads, and account recovery options.
-
-- **End-to-End Encryption:**
-  Implement true end-to-end encryption for maximum privacy.
-
-- **Message Search:**
-  Allow users to search through their message history.
-
-- **Mobile Responsive Design:**
-  Optimize the interface for mobile devices.
