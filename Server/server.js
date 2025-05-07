@@ -2,6 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import express from 'express';
 import { WebSocketServer } from 'ws';
+import fs from 'fs';
+import path from 'path';
+import express from 'express';
+import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto'; // Add crypto for CAPTCHA token generation
 
@@ -18,30 +22,17 @@ const captchas = new Map();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-<<<<<<< HEAD
-=======
-// SSL/TLS Certificates
-const CERT_PATH = path.join(__dirname, '../certs');
-const serverOptions = {
-  key: fs.readFileSync(path.join(CERT_PATH, 'key.pem')),
-  cert: fs.readFileSync(path.join(CERT_PATH, 'cert.pem'))
-};
-
->>>>>>> parent of 174cbc5 (changed to mongodb)
 // Express Server
 const app = express();
 const STATIC_DIR = path.join(__dirname, '../client');
 app.use(express.static(STATIC_DIR));
 app.use(express.json());
 
-<<<<<<< HEAD
 console.log("__filename ", __filename);
 console.log("__dirname ", __dirname);
 console.log("STATIC_DIR ", STATIC_DIR);
 
 // Serve login page
-=======
->>>>>>> parent of 174cbc5 (changed to mongodb)
 app.get('/', (req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'login.html'));
 });
@@ -159,7 +150,6 @@ async function init() {
   console.log('Server initialized');
 }
 
-<<<<<<< HEAD
 // Initialize server
 const port = process.env.PORT || 8001;
 const server = app.listen(port, () => {
@@ -172,9 +162,6 @@ const server = app.listen(port, () => {
   
   console.log(`[${new Date().toISOString()}] Server running on ${appUrl}`);
 });
-=======
-console.log(`[${new Date().toISOString()}] Server running on https://localhost:8001`); //Change to IP, for debugging connection DONT COMMIT IP
->>>>>>> parent of 174cbc5 (changed to mongodb)
 
 // Create WebSocket server
 const wss = new WebSocketServer({ server });
@@ -319,17 +306,7 @@ function handlePublicKey(client, username, publicKey) {
   }
 }
 
-<<<<<<< HEAD
 // Periodically reset rate limiting
-=======
-// Initialize server
-init().then(() => {
-  httpsServer.listen(8001, () => console.log(`HTTPS running on https://localhost:8001`)); //Change to IP, for debugging connection DONT COMMIT IT
-}).catch(error => {
-  console.error('Failed to initialize server:', error);
-});
-
->>>>>>> parent of 174cbc5 (changed to mongodb)
 setInterval(() => {
   wss.clients.forEach(client => {
     if (client.authenticated && client.rateLimitData) {
