@@ -1,11 +1,9 @@
 import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
-import path from 'path';
-import mysql from 'mysql2'
 import mongoose from 'mongoose'
 
-// Use the current working directory as the base path for users.json
-const usersFile = path.join(process.cwd(), "users.json");
+// Path to users file
+const usersFile = 'Server/data/users.json';
 
 // For MongoDB connection
 const uri = process.env.MONGODB_URI;
@@ -26,11 +24,11 @@ if (uri) {
 
     User = mongoose.model('User', userSchema);
   } catch (err) {
-    console.error("❌ MongoDB Connection Error:", err);
-    console.log("📢 Continuing with local file-based authentication");
+    console.error("MongoDB Connection Error:", err);
+    console.log("Continuing with local file-based authentication");
   }
 } else {
-  console.log("⚠️ No MONGODB_URI environment variable found. Using local file-based authentication.");
+  console.log("No MONGODB_URI environment variable found. Using local file-based authentication.");
 }
 
 // Password validation function

@@ -681,7 +681,7 @@ function updateUploadProgress(percent) {
 function logSecurityViolation(file, reason) {
   console.warn(`[Security] Blocked file upload - potential malware: ${file.name} (${file.type}, ${Math.round(file.size / 1024)}KB) - Reason: ${reason}`);
   
-  // In a real application, you might want to send this to the server for monitoring
+  // might want to send this to the server for monitoring
   if (socket.readyState === WebSocket.OPEN) {
     try {
       socket.send(JSON.stringify({

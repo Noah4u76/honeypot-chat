@@ -38,3 +38,4 @@ pids
 # Build directories
 .history
 chat_logs
+data/
