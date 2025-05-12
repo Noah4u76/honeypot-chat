@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // If login failed because user doesn't exist, offer to create account
         if (data.reason === "user_not_found") {
           if (confirm("This username doesn't exist. Would you like to create a new account?")) {
-            window.location.href = "acount.html";
+            window.location.href = "register.html";
           }
         }
       }
